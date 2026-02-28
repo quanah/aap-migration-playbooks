@@ -1,0 +1,4 @@
+---
+skip_version_check: false
+required_postgresql_version: "15"
+containerized_installer_inventory: ~/inventory

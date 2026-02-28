@@ -1,0 +1,38 @@
+---
+- name: Confirm AAP idle operation
+  ansible.builtin.pause:
+    prompt: >-
+      About to idle the AAP deployment on OpenShift.
+      All AAP component pods will be scaled down.
+      Press Enter to continue or Ctrl+C to abort.
+  when: confirm_destructive_operations | default(true)
+
+- name: Set idle_aap to scale down AAP components
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: aap.ansible.com/v1alpha1
+    kind: AnsibleAutomationPlatform
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ aap_instance_name }}"
+    merge_type: merge
+    definition:
+      spec:
+        idle_aap: true
+
+- name: Wait for component pods to stop
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/part-of=aap"
+      - "app.kubernetes.io/component!=operator"
+    field_selectors:
+      - "status.phase=Running"
+  register: running_pods
+  until: >-
+    running_pods.resources | rejectattr('metadata.name', 'search', 'operator') |
+    rejectattr('metadata.name', 'search', 'postgres') | list | length == 0
+  retries: 30
+  delay: 10

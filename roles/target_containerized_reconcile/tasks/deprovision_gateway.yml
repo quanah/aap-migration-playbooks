@@ -1,0 +1,22 @@
+---
+- name: Run gateway database migrations
+  ansible.builtin.command:
+    cmd: "podman exec automation-gateway aap-gateway-manage migrate"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+
+- name: Deprovision gateway proxy configuration
+  ansible.builtin.command:
+    cmd: >-
+      podman exec automation-gateway aap-gateway-manage shell -c
+      "from aap_gateway_api.models import HTTPPort, ServiceNode, ServiceCluster;
+      HTTPPort.objects.all().delete();
+      ServiceNode.objects.all().delete();
+      ServiceCluster.objects.all().delete()"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: gateway_deprovision
+  changed_when: "'delete' in gateway_deprovision.stdout"
+
+- name: Display gateway deprovision result
+  ansible.builtin.debug:
+    var: gateway_deprovision.stdout_lines
+  run_once: true

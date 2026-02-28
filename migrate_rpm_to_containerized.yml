@@ -1,0 +1,59 @@
+---
+# AAP 2.6 Migration: RPM-based to Containerized
+# Follows Red Hat AAP 2.6 Migration Guide phases 1-7
+
+# Phase 0: Common prerequisites
+- name: "Phase 0: Validate prerequisites"
+  hosts: all
+  gather_facts: true
+  tags: [assess]
+  roles:
+    - common
+
+# Phase 1: Assess RPM source environment
+- name: "Phase 1: Assess source RPM environment"
+  hosts: source
+  gather_facts: true
+  tags: [assess]
+  roles:
+    - source_assess
+
+# Phase 2-3: Export source environment and create artifact
+- name: "Phase 2-3: Export source environment and create migration artifact"
+  hosts: source
+  gather_facts: false
+  tags: [export, slow]
+  roles:
+    - source_export
+
+# Phase 4: Assess containerized target environment
+- name: "Phase 4: Assess target containerized environment"
+  hosts: target
+  gather_facts: true
+  tags: [assess]
+  roles:
+    - target_containerized_assess
+
+# Phase 5: Import migration content to target
+- name: "Phase 5: Import migration content to containerized target"
+  hosts: target
+  gather_facts: false
+  tags: [import, slow]
+  roles:
+    - target_containerized_import
+
+# Phase 6: Reconcile target environment
+- name: "Phase 6: Reconcile containerized target environment"
+  hosts: target
+  gather_facts: false
+  tags: [reconcile]
+  roles:
+    - target_containerized_reconcile
+
+# Phase 7: Validate target environment
+- name: "Phase 7: Validate containerized target environment"
+  hosts: target
+  gather_facts: false
+  tags: [validate]
+  roles:
+    - validate

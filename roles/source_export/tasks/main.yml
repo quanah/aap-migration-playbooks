@@ -1,0 +1,24 @@
+---
+- name: Gather database settings from source components
+  ansible.builtin.include_tasks: gather_db_settings.yml
+
+- name: Validate database sizes and filesystem space
+  ansible.builtin.include_tasks: validate_databases.yml
+
+- name: Stage artifact directory structure
+  ansible.builtin.include_tasks: stage_artifact.yml
+
+- name: Dump component databases
+  ansible.builtin.include_tasks: dump_databases.yml
+
+- name: Export secrets from source components
+  ansible.builtin.include_tasks: export_secrets.yml
+
+- name: Copy custom configurations
+  ansible.builtin.include_tasks: copy_custom_configs.yml
+
+- name: Create manifest file
+  ansible.builtin.include_tasks: create_manifest.yml
+
+- name: Package migration artifact
+  ansible.builtin.include_tasks: package_artifact.yml

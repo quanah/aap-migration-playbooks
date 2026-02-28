@@ -1,0 +1,40 @@
+---
+- name: "{{ db_component.name }} - Grant CREATEDB role"
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ temp_pg_pod_name }}"
+    command: >-
+      psql -h {{ postgres_statefulset }}
+      -U postgres
+      -c "ALTER USER {{ ocp_db_creds[db_component.name].user }} WITH CREATEDB;"
+  environment:
+    PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"
+
+- name: "{{ db_component.name }} - Restore database"
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ temp_pg_pod_name }}"
+    command: >-
+      pg_restore --clean --create --no-owner
+      -h {{ postgres_statefulset }}
+      -U {{ ocp_db_creds[db_component.name].user }}
+      -d {{ ocp_db_creds[db_component.name].database }}
+      /tmp/aap-temp-pvc/artifact/{{ db_component.dump_file }}
+  environment:
+    PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"
+  register: restore_result
+  failed_when: restore_result.rc != 0 and 'WARNING' not in restore_result.stderr | default('')
+
+- name: "{{ db_component.name }} - Revoke CREATEDB role"
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ temp_pg_pod_name }}"
+    command: >-
+      psql -h {{ postgres_statefulset }}
+      -U postgres
+      -c "ALTER USER {{ ocp_db_creds[db_component.name].user }} NOCREATEDB;"
+  environment:
+    PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"

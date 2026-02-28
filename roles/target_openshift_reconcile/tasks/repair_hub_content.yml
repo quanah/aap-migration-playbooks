@@ -1,0 +1,37 @@
+---
+- name: Repair orphaned automation hub content links
+  ansible.builtin.uri:
+    url: "https://{{ gateway_hostname | default(aap_instance_name + '.' + ocp_namespace + '.svc') }}/api/galaxy/pulp/api/v3/repair/"
+    method: POST
+    body_format: json
+    body:
+      verify_checksums: true
+    url_username: "{{ gateway_admin_user | default('admin') }}"
+    url_password: "{{ gateway_admin_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code: [200, 202]
+  register: hub_repair_result
+  delegate_to: localhost
+  run_once: true
+  when: migrate_hub | default(true)
+
+- name: Display hub repair result
+  ansible.builtin.debug:
+    msg: "Hub content repair initiated: {{ hub_repair_result.status | default('skipped') }}"
+  run_once: true
+
+- name: Post-reconciliation manual steps reminder
+  ansible.builtin.debug:
+    msg: |
+      OpenShift reconciliation automated steps complete.
+
+      Manual steps remaining:
+        1. Verify Django SECRET_KEY secrets match source platform
+        2. Reconcile instance groups configuration
+        3. Reconcile decision environments and credentials
+        4. Reconcile execution environments and credentials
+        5. Convert any container-specific settings to OCP-appropriate formats
+        6. Reconcile container resource allocations to OCP resources
+        7. Test integration with OCP-specific features
+  run_once: true

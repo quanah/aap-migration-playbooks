@@ -1,0 +1,36 @@
+---
+- name: Check for custom configuration files in artifact
+  ansible.builtin.find:
+    paths: "{{ artifact_dir }}/controller/custom_configs"
+    file_type: file
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: custom_config_files
+
+- name: Display custom configurations to transfer
+  ansible.builtin.debug:
+    msg: >-
+      Found {{ custom_config_files.files | length }} custom configuration files.
+      These must be applied to the containerized inventory as extra_settings.
+      Update your inventory file at {{ containerized_installer_inventory }} with
+      controller_extra_settings for each custom configuration.
+  run_once: true
+  when: custom_config_files.files | length > 0
+
+- name: List custom configuration files
+  ansible.builtin.debug:
+    msg: "Custom config: {{ item.path | basename }}"
+  loop: "{{ custom_config_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: custom_config_files.files | length > 0
+
+- name: Pause for manual inventory update if custom configs exist
+  ansible.builtin.pause:
+    prompt: >-
+      Custom configuration files found. Update your containerized inventory
+      ({{ containerized_installer_inventory }}) with the appropriate
+      component_extra_settings, then press Enter to continue.
+  when:
+    - custom_config_files.files | length > 0
+    - confirm_destructive_operations | default(true)
+  run_once: true

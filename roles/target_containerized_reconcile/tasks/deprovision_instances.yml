@@ -1,0 +1,46 @@
+---
+- name: List instances on target controller
+  ansible.builtin.command:
+    cmd: "podman exec automation-controller-task awx-manage list_instances"
+  delegate_to: "{{ groups['target_controller'][0] }}"
+  register: instance_list
+  changed_when: false
+
+- name: Display current instances
+  ansible.builtin.debug:
+    var: instance_list.stdout_lines
+
+- name: Identify orphaned instances (capacity=0)
+  ansible.builtin.shell:
+    cmd: >-
+      podman exec automation-controller-task awx-manage list_instances |
+      grep 'capacity=0' |
+      grep -oP '[\w.-]+(?=\s+capacity=0)'
+  delegate_to: "{{ groups['target_controller'][0] }}"
+  register: orphaned_instances
+  changed_when: false
+  failed_when: false
+
+- name: Display orphaned instances to deprovision
+  ansible.builtin.debug:
+    msg: "Orphaned instances to remove: {{ orphaned_instances.stdout_lines | default([]) }}"
+  when: orphaned_instances.stdout_lines | default([]) | length > 0
+
+- name: Confirm instance deprovision
+  ansible.builtin.pause:
+    prompt: >-
+      About to deprovision {{ orphaned_instances.stdout_lines | length }} orphaned instances.
+      Press Enter to continue or Ctrl+C to abort.
+  when:
+    - confirm_destructive_operations | default(true)
+    - orphaned_instances.stdout_lines | default([]) | length > 0
+  run_once: true
+
+- name: Deprovision orphaned instances
+  ansible.builtin.command:
+    cmd: >-
+      podman exec automation-controller-task
+      awx-manage deprovision_instance --hostname={{ item }}
+  delegate_to: "{{ groups['target_controller'][0] }}"
+  loop: "{{ orphaned_instances.stdout_lines | default([]) }}"
+  when: orphaned_instances.stdout_lines | default([]) | length > 0

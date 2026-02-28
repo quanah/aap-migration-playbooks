@@ -1,0 +1,89 @@
+---
+- name: Get PostgreSQL image from existing pod
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ postgres_statefulset }}-0"
+  register: pg_pod_info
+
+- name: Set PostgreSQL image fact
+  ansible.builtin.set_fact:
+    postgres_image: "{{ pg_pod_info.resources[0].spec.containers[0].image }}"
+
+- name: Display PostgreSQL image
+  ansible.builtin.debug:
+    msg: "Using PostgreSQL image: {{ postgres_image }}"
+
+- name: Create temporary PVC
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "{{ temp_pvc_name }}"
+        namespace: "{{ ocp_namespace }}"
+      spec:
+        accessModes:
+          - "{{ temp_pvc_access_mode }}"
+        resources:
+          requests:
+            storage: "{{ temp_pvc_size }}"
+
+- name: Create temporary PostgreSQL deployment
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ temp_postgres_deployment }}"
+        namespace: "{{ ocp_namespace }}"
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: "{{ temp_postgres_deployment }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ temp_postgres_deployment }}"
+          spec:
+            containers:
+              - name: "{{ temp_postgres_deployment }}"
+                image: "{{ postgres_image }}"
+                command: ["/bin/sh", "-c", "sleep infinity"]
+                imagePullPolicy: Always
+                securityContext:
+                  runAsNonRoot: true
+                  allowPrivilegeEscalation: false
+                volumeMounts:
+                  - name: "{{ temp_pvc_name }}"
+                    mountPath: /tmp/aap-temp-pvc
+            volumes:
+              - name: "{{ temp_pvc_name }}"
+                persistentVolumeClaim:
+                  claimName: "{{ temp_pvc_name }}"
+
+- name: Wait for temporary PostgreSQL pod to be ready
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "app={{ temp_postgres_deployment }}"
+  register: temp_pg_pod
+  until: >-
+    temp_pg_pod.resources | length > 0 and
+    temp_pg_pod.resources[0].status.phase == 'Running'
+  retries: 30
+  delay: 10
+
+- name: Set temp pod name fact
+  ansible.builtin.set_fact:
+    temp_pg_pod_name: "{{ temp_pg_pod.resources[0].metadata.name }}"

@@ -1,0 +1,25 @@
+---
+- name: Check if aap-resource-server secret exists
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Secret
+    namespace: "{{ ocp_namespace }}"
+    name: aap-resource-server
+  register: resource_server_secret
+
+- name: Delete aap-resource-server secret
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Secret
+    namespace: "{{ ocp_namespace }}"
+    name: aap-resource-server
+    state: absent
+  when: resource_server_secret.resources | length > 0
+
+- name: Wait for operators to reconcile new resource server secret
+  ansible.builtin.pause:
+    seconds: 60
+    prompt: "Waiting for operator reconciliation to recreate resource server keys..."
+  when: resource_server_secret.resources | length > 0

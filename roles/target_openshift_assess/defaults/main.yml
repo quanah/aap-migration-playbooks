@@ -1,0 +1,5 @@
+---
+skip_version_check: false
+kubeconfig: ~/.kube/config
+ocp_namespace: aap
+aap_instance_name: aap

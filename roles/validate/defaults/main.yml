@@ -1,0 +1,5 @@
+---
+# gateway_hostname: gateway.example.com
+# gateway_admin_user: admin
+# gateway_admin_password: changeme
+validate_timeout: 30

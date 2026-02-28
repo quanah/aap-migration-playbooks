@@ -1,0 +1,83 @@
+---
+- name: Validate filesystem space for artifact transfer
+  ansible.builtin.command:
+    cmd: "df -h ~"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: target_fs_space
+  changed_when: false
+
+- name: Display target filesystem space
+  ansible.builtin.debug:
+    var: target_fs_space.stdout_lines
+  run_once: true
+
+- name: Verify artifact exists on target
+  ansible.builtin.stat:
+    path: "{{ artifact_archive }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: target_artifact
+
+- name: Verify artifact checksum file exists on target
+  ansible.builtin.stat:
+    path: "{{ artifact_checksum }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: target_artifact_checksum
+
+- name: Validate artifact checksum
+  ansible.builtin.command:
+    cmd: "sha256sum --check {{ artifact_checksum }}"
+  args:
+    chdir: "{{ artifact_archive | dirname }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  changed_when: false
+  when: target_artifact.stat.exists and target_artifact_checksum.stat.exists
+
+- name: Extract artifact on target
+  ansible.builtin.command:
+    cmd: "tar xf {{ artifact_archive }}"
+  args:
+    chdir: "{{ artifact_archive | dirname }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  when: target_artifact.stat.exists
+
+- name: Verify artifact internal checksums
+  ansible.builtin.command:
+    cmd: "sha256sum --check sha256sum.txt"
+  args:
+    chdir: "{{ artifact_dir }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  changed_when: false
+
+- name: Verify PostgreSQL version on target
+  ansible.builtin.shell:
+    cmd: "podman exec postgresql psql -t -c 'SHOW server_version;'"
+  delegate_to: "{{ groups['target_db'][0] }}"
+  register: target_pg_version
+  changed_when: false
+
+- name: Validate PostgreSQL version on target
+  ansible.builtin.assert:
+    that:
+      - target_pg_version.stdout is search(required_postgresql_version)
+    fail_msg: >-
+      Target PostgreSQL version mismatch. Expected {{ required_postgresql_version }},
+      got {{ target_pg_version.stdout | trim }}.
+    quiet: true
+  when: not skip_version_check
+
+- name: Create backup of initial containerized environment
+  ansible.builtin.command:
+    cmd: >-
+      ansible-playbook -i {{ containerized_installer_inventory }}
+      ansible.containerized_installer.backup
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  when: target_artifact.stat.exists
+
+- name: Target containerized assessment complete
+  ansible.builtin.debug:
+    msg: |
+      Target Assessment Complete:
+        Artifact verified: {{ target_artifact.stat.exists }}
+        PostgreSQL version: {{ target_pg_version.stdout | trim }}
+        Initial backup created
+  run_once: true

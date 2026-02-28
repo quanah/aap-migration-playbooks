@@ -1,0 +1,35 @@
+---
+- name: Repair orphaned automation hub content links
+  ansible.builtin.uri:
+    url: "https://{{ gateway_hostname | default(groups['target_gateway'][0]) }}/api/galaxy/pulp/api/v3/repair/"
+    method: POST
+    body_format: json
+    body:
+      verify_checksums: true
+    url_username: "{{ gateway_admin_user | default('admin') }}"
+    url_password: "{{ gateway_admin_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code: [200, 202]
+  register: hub_repair_result
+  delegate_to: localhost
+  run_once: true
+  when: migrate_hub | default(true)
+
+- name: Display hub repair result
+  ansible.builtin.debug:
+    msg: "Hub content repair initiated: {{ hub_repair_result.status | default('skipped') }}"
+  run_once: true
+
+- name: Post-reconciliation manual steps reminder
+  ansible.builtin.debug:
+    msg: |
+      Reconciliation automated steps complete.
+
+      Manual steps remaining:
+        1. Reconcile instance groups: Automation Execution > Infrastructure > Instance Groups
+        2. Reconcile decision environments: Automation Decisions > Decision Environments
+        3. Reconcile execution environments: Automation Execution > Infrastructure > Execution Environments
+        4. Verify credentials align with new environment
+        5. Check RBAC rules with instance groups
+  run_once: true

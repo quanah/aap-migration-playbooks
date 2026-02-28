@@ -1,0 +1,33 @@
+---
+- name: Validate Ansible version
+  ansible.builtin.assert:
+    that:
+      - ansible_version.full is version('2.15', '>=')
+    fail_msg: "Ansible 2.15+ is required. Found {{ ansible_version.full }}"
+    quiet: true
+
+- name: Check required collections are installed
+  ansible.builtin.command:
+    cmd: "ansible-galaxy collection list {{ item }}"
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+  loop:
+    - community.postgresql
+    - ansible.posix
+
+- name: Verify connectivity to all hosts
+  ansible.builtin.ping:
+
+- name: Display migration configuration
+  ansible.builtin.debug:
+    msg: |
+      Migration Configuration:
+        AAP version required: {{ required_aap_version }}
+        PostgreSQL version required: {{ required_postgresql_version }}
+        Skip version check: {{ skip_version_check }}
+        Confirm destructive ops: {{ confirm_destructive_operations }}
+        Migrate controller: {{ migrate_controller | default(true) }}
+        Migrate hub: {{ migrate_hub | default(true) }}
+        Migrate gateway: {{ migrate_gateway | default(true) }}
+  run_once: true

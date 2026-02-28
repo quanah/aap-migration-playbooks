@@ -1,0 +1,61 @@
+---
+- name: Start PCP on all nodes (if configured)
+  ansible.builtin.systemd:
+    name: "{{ pcp_service }}"
+    state: started
+    scope: user
+  ignore_errors: true
+
+- name: Start Redis services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    scope: user
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  loop: "{{ redis_services }}"
+  ignore_errors: true
+
+- name: Start controller services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    scope: user
+  delegate_to: "{{ groups['target_controller'][0] }}"
+  loop: "{{ controller_services + controller_extra_services }}"
+  when: migrate_controller | default(true)
+
+- name: Start hub services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    scope: user
+  delegate_to: "{{ groups['target_hub'][0] }}"
+  loop: "{{ hub_services }}"
+  when: migrate_hub | default(true)
+
+- name: Start EDA services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    scope: user
+  delegate_to: "{{ groups['target_eda'][0] }}"
+  loop: "{{ eda_services }}"
+  when: migrate_eda | default(false)
+
+- name: Start gateway services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    scope: user
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  loop: "{{ gateway_services }}"
+  when: migrate_gateway | default(true)
+
+- name: Wait for services to stabilize
+  ansible.builtin.pause:
+    seconds: 30
+
+- name: Services import phase complete
+  ansible.builtin.debug:
+    msg: "All containerized services restarted after database import"
+  run_once: true

@@ -1,0 +1,22 @@
+---
+- name: Deprovision gateway configuration
+  ansible.builtin.include_tasks: deprovision_gateway.yml
+
+- name: Transfer custom configurations
+  ansible.builtin.include_tasks: transfer_custom_configs.yml
+
+- name: Remove resource server secrets
+  ansible.builtin.include_tasks: remove_resource_server.yml
+
+- name: Re-run installer
+  ansible.builtin.include_tasks: rerun_installer.yml
+
+- name: Sync EDA gateway resources
+  ansible.builtin.include_tasks: sync_eda.yml
+  when: migrate_eda | default(false)
+
+- name: Deprovision orphaned instances
+  ansible.builtin.include_tasks: deprovision_instances.yml
+
+- name: Repair hub content
+  ansible.builtin.include_tasks: repair_hub_content.yml

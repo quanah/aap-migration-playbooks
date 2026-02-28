@@ -1,0 +1,56 @@
+---
+- name: Scale down gateway and controller operators
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ item }}"
+    definition:
+      spec:
+        replicas: 0
+  loop:
+    - "{{ gateway_operator_deployment }}"
+    - "{{ controller_operator_deployment }}"
+
+- name: Wait for operator pods to terminate
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "control-plane=controller-manager"
+  register: operator_pods
+  until: >-
+    operator_pods.resources |
+    selectattr('metadata.name', 'search', 'gateway-operator|controller-operator') |
+    selectattr('status.phase', 'equalto', 'Running') | list | length == 0
+  retries: 12
+  delay: 10
+
+- name: Scale up PostgreSQL StatefulSet
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: apps/v1
+    kind: StatefulSet
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ postgres_statefulset }}"
+    definition:
+      spec:
+        replicas: 1
+
+- name: Wait for PostgreSQL pod to be ready
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "statefulset.kubernetes.io/pod-name={{ postgres_statefulset }}-0"
+  register: pg_pod
+  until: >-
+    pg_pod.resources | length > 0 and
+    pg_pod.resources[0].status.phase == 'Running'
+  retries: 30
+  delay: 10

@@ -1,0 +1,18 @@
+---
+- name: Confirm re-running the containerized installer
+  ansible.builtin.pause:
+    prompt: >-
+      About to re-run the containerized installer.
+      This will reconfigure services with the updated secrets and settings.
+      Press Enter to continue or Ctrl+C to abort.
+  when: confirm_destructive_operations | default(true)
+  run_once: true
+
+- name: Re-run the containerized installer
+  ansible.builtin.command:
+    cmd: >-
+      ansible-playbook -i {{ containerized_installer_inventory }}
+      ansible.containerized_installer.install
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  async: 3600
+  poll: 60

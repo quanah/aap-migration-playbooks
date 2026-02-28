@@ -1,0 +1,9 @@
+---
+- name: Stop containerized services
+  ansible.builtin.include_tasks: stop_services.yml
+
+- name: Restore databases from migration artifact
+  ansible.builtin.include_tasks: restore_databases.yml
+
+- name: Start containerized services
+  ansible.builtin.include_tasks: start_services.yml

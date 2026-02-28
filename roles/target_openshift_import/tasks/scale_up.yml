@@ -1,0 +1,64 @@
+---
+- name: Scale gateway and controller operators back up
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ item }}"
+    definition:
+      spec:
+        replicas: 1
+  loop:
+    - "{{ gateway_operator_deployment }}"
+    - "{{ controller_operator_deployment }}"
+
+- name: Wait for gateway operator to be ready
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ gateway_operator_deployment }}"
+  register: gw_operator
+  until: >-
+    gw_operator.resources | length > 0 and
+    (gw_operator.resources[0].status.readyReplicas | default(0)) >= 1
+  retries: 30
+  delay: 10
+
+- name: Wait for operator reconciliation to complete
+  ansible.builtin.pause:
+    seconds: 60
+    prompt: "Waiting for operator reconciliation loop to complete..."
+
+- name: Un-idle AAP deployment
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: aap.ansible.com/v1alpha1
+    kind: AnsibleAutomationPlatform
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ aap_instance_name }}"
+    merge_type: merge
+    definition:
+      spec:
+        idle_aap: false
+
+- name: Wait for gateway pod to be running
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=aap-gateway"
+  register: gw_pods
+  until: >-
+    gw_pods.resources | length > 0 and
+    gw_pods.resources[0].status.phase == 'Running'
+  retries: 60
+  delay: 10
+
+- name: AAP scaled back up
+  ansible.builtin.debug:
+    msg: "AAP components have been scaled back up and gateway is running"

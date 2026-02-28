@@ -1,0 +1,35 @@
+---
+kubeconfig: ~/.kube/config
+ocp_namespace: aap
+aap_instance_name: aap
+confirm_destructive_operations: true
+db_restore_timeout: 3600
+
+# PostgreSQL settings
+postgres_statefulset: aap-postgres-15
+
+# Temp PVC settings
+temp_pvc_name: aap-temp-pvc
+temp_pvc_size: 200Gi
+temp_pvc_access_mode: ReadWriteOnce
+
+# Temp deployment
+temp_postgres_deployment: aap-temp-postgres
+
+# Operator deployments
+gateway_operator_deployment: aap-gateway-operator-controller-manager
+controller_operator_deployment: automation-controller-operator-controller-manager
+
+# OCP database config secrets
+controller_pg_config_secret: aap-controller-postgres-configuration
+hub_pg_config_secret: aap-hub-postgres-configuration
+gateway_pg_config_secret: aap-gateway-postgres-configuration
+
+# OCP encryption secrets
+controller_secret_name: aap-controller-secret-key
+gateway_secret_name: aap-db-fields-encryption-secret
+hub_secret_name: aap-hub-db-fields-encryption
+
+# Artifact settings
+artifact_archive: /tmp/backups/artifact.tar
+artifact_checksum: /tmp/backups/artifact.tar.sha256

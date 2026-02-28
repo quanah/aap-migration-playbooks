@@ -1,0 +1,35 @@
+---
+- name: Gather component versions for manifest
+  ansible.builtin.set_fact:
+    manifest_components: []
+
+- name: Get controller version
+  ansible.builtin.command:
+    cmd: awx-manage version
+  delegate_to: "{{ groups['source_controller'][0] }}"
+  register: manifest_controller_version
+  changed_when: false
+  when: migrate_controller | default(true)
+
+- name: Get hub version
+  ansible.builtin.shell:
+    cmd: "rpm -q automation-hub --qf '%{VERSION}'"
+  delegate_to: "{{ groups['source_hub'][0] }}"
+  register: manifest_hub_version
+  changed_when: false
+  when: migrate_hub | default(true)
+
+- name: Get gateway version
+  ansible.builtin.command:
+    cmd: aap-gateway-manage version
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  register: manifest_gateway_version
+  changed_when: false
+  when: migrate_gateway | default(true)
+
+- name: Write manifest file from template
+  ansible.builtin.template:
+    src: manifest.yml.j2
+    dest: "{{ artifact_dir }}/manifest.yml"
+    mode: "0644"
+  delegate_to: "{{ groups['source_gateway'][0] }}"

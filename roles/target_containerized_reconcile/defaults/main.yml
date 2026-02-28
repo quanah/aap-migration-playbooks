@@ -1,0 +1,5 @@
+---
+containerized_installer_inventory: ~/inventory
+confirm_destructive_operations: true
+# gateway_admin_user: admin
+# gateway_admin_password: changeme

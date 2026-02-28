@@ -1,0 +1,47 @@
+---
+artifact_dir: /tmp/backups/artifact
+db_restore_timeout: 3600
+confirm_destructive_operations: true
+postgresql_image: "registry.redhat.io/rhel8/postgresql-15:latest"
+
+# Database restore components
+restore_components:
+  - name: controller
+    pg_user: "{{ controller_pg_user | default('awx') }}"
+    pg_database: "{{ controller_pg_database | default('awx') }}"
+  - name: hub
+    pg_user: "{{ hub_pg_user | default('automationhub') }}"
+    pg_database: "{{ hub_pg_database | default('automationhub') }}"
+  - name: gateway
+    pg_user: "{{ gateway_pg_user | default('gateway') }}"
+    pg_database: "{{ gateway_pg_database | default('gateway') }}"
+
+# Service lists
+controller_services:
+  - automation-controller-task
+  - automation-controller-web
+  - automation-controller-rsyslog
+controller_extra_services:
+  - receptor
+hub_services:
+  - automation-hub-api
+  - automation-hub-content
+  - automation-hub-web
+  - automation-hub-worker-1
+  - automation-hub-worker-2
+eda_services:
+  - automation-eda-scheduler
+  - automation-eda-daphne
+  - automation-eda-web
+  - automation-eda-api
+  - automation-eda-worker-1
+  - automation-eda-worker-2
+  - automation-eda-activation-worker-1
+  - automation-eda-activation-worker-2
+gateway_services:
+  - automation-gateway
+  - automation-gateway-proxy
+redis_services:
+  - redis-unix
+  - redis-tcp
+pcp_service: pcp

@@ -1,0 +1,4 @@
+---
+skip_version_check: false
+required_aap_version: "2.6"
+required_postgresql_version: "15"

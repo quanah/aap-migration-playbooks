@@ -1,0 +1,10 @@
+---
+- name: Sync gateway resources for Event-Driven Ansible
+  ansible.builtin.command:
+    cmd: "podman exec automation-eda-api aap-eda-manage resource_sync"
+  delegate_to: "{{ groups['target_eda'][0] }}"
+  register: eda_sync_result
+
+- name: Display EDA sync result
+  ansible.builtin.debug:
+    var: eda_sync_result.stdout_lines

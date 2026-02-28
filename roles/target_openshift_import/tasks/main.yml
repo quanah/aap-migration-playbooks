@@ -1,0 +1,24 @@
+---
+- name: Scale down AAP components
+  ansible.builtin.include_tasks: idle_aap.yml
+
+- name: Scale operators and PostgreSQL
+  ansible.builtin.include_tasks: scale_operators.yml
+
+- name: Create temporary resources for restore
+  ansible.builtin.include_tasks: create_temp_resources.yml
+
+- name: Transfer artifact to temporary pod
+  ansible.builtin.include_tasks: transfer_artifact.yml
+
+- name: Restore databases
+  ansible.builtin.include_tasks: restore_databases.yml
+
+- name: Update encryption secrets
+  ansible.builtin.include_tasks: update_secrets.yml
+
+- name: Clean up temporary resources
+  ansible.builtin.include_tasks: cleanup_temp.yml
+
+- name: Scale AAP back up
+  ansible.builtin.include_tasks: scale_up.yml

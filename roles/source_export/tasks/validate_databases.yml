@@ -1,0 +1,26 @@
+---
+- name: Check database sizes
+  ansible.builtin.command:
+    cmd: psql -t -c '\l+'
+  become: true
+  become_user: postgres
+  delegate_to: "{{ groups['source_db'][0] }}"
+  register: db_sizes
+  changed_when: false
+
+- name: Display database sizes
+  ansible.builtin.debug:
+    var: db_sizes.stdout_lines
+  run_once: true
+
+- name: Check available filesystem space on gateway node
+  ansible.builtin.command:
+    cmd: "df -h {{ artifact_dir | dirname }}"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  register: fs_space
+  changed_when: false
+
+- name: Display available filesystem space
+  ansible.builtin.debug:
+    var: fs_space.stdout_lines
+  run_once: true

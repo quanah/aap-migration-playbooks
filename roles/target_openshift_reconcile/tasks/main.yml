@@ -1,0 +1,12 @@
+---
+- name: Clean up old gateway service endpoints
+  ansible.builtin.include_tasks: clean_endpoints.yml
+
+- name: Deprovision orphaned instances
+  ansible.builtin.include_tasks: deprovision_instances.yml
+
+- name: Remove resource server secret
+  ansible.builtin.include_tasks: remove_resource_server.yml
+
+- name: Repair hub content
+  ansible.builtin.include_tasks: repair_hub_content.yml

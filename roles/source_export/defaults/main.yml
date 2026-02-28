@@ -1,0 +1,34 @@
+---
+artifact_dir: /tmp/backups/artifact
+artifact_archive: /tmp/backups/artifact.tar
+artifact_checksum: /tmp/backups/artifact.tar.sha256
+db_dump_timeout: 3600
+
+# Components to dump
+components:
+  - name: controller
+    pg_user: "{{ controller_pg_user | default('awx') }}"
+    pg_database: "{{ controller_pg_database | default('awx') }}"
+    pg_host: "{{ controller_pg_host | default(groups['source_db'][0]) }}"
+  - name: hub
+    pg_user: "{{ hub_pg_user | default('automationhub') }}"
+    pg_database: "{{ hub_pg_database | default('automationhub') }}"
+    pg_host: "{{ hub_pg_host | default(groups['source_db'][0]) }}"
+  - name: gateway
+    pg_user: "{{ gateway_pg_user | default('gateway') }}"
+    pg_database: "{{ gateway_pg_database | default('gateway') }}"
+    pg_host: "{{ gateway_pg_host | default(groups['source_db'][0]) }}"
+
+# Controller managed configs to exclude
+controller_managed_configs:
+  - postgres.py
+  - channels.py
+  - caching.py
+  - cluster_host_id.py
+
+# Source paths
+controller_secret_key_path: /etc/tower/SECRET_KEY
+hub_settings_path: /etc/pulp/settings.py
+hub_db_fields_key_path: /etc/pulp/certs/database_fields.symmetric.key
+gateway_secret_key_path: /etc/ansible-automation-platform/gateway/SECRET_KEY
+controller_custom_config_dir: /etc/tower/conf.d

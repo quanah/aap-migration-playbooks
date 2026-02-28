@@ -1,0 +1,79 @@
+---
+- name: Validate gateway is accessible
+  ansible.builtin.uri:
+    url: "https://{{ gateway_hostname | default(groups['target_gateway'][0] | default(gateway_hostname)) }}/"
+    validate_certs: false
+    status_code: [200, 302]
+    timeout: "{{ validate_timeout }}"
+  register: gateway_check
+  ignore_errors: true
+  run_once: true
+  delegate_to: localhost
+
+- name: Report gateway status
+  ansible.builtin.debug:
+    msg: >-
+      Gateway health check:
+      {{ 'PASS' if gateway_check is succeeded else 'FAIL' }} -
+      {{ gateway_check.msg | default(gateway_check.status | default('unreachable')) }}
+  run_once: true
+
+- name: Validate controller API is responding
+  ansible.builtin.uri:
+    url: "https://{{ gateway_hostname | default(groups['target_gateway'][0] | default(gateway_hostname)) }}/api/v2/ping/"
+    validate_certs: false
+    status_code: [200]
+    timeout: "{{ validate_timeout }}"
+  register: controller_api_check
+  ignore_errors: true
+  run_once: true
+  delegate_to: localhost
+  when: migrate_controller | default(true)
+
+- name: Report controller API status
+  ansible.builtin.debug:
+    msg: >-
+      Controller API health check:
+      {{ 'PASS' if controller_api_check is succeeded else 'FAIL' }}
+  run_once: true
+  when: migrate_controller | default(true)
+
+- name: Validate hub API is responding
+  ansible.builtin.uri:
+    url: "https://{{ gateway_hostname | default(groups['target_gateway'][0] | default(gateway_hostname)) }}/api/galaxy/"
+    validate_certs: false
+    status_code: [200, 302]
+    timeout: "{{ validate_timeout }}"
+  register: hub_api_check
+  ignore_errors: true
+  run_once: true
+  delegate_to: localhost
+  when: migrate_hub | default(true)
+
+- name: Report hub API status
+  ansible.builtin.debug:
+    msg: >-
+      Hub API health check:
+      {{ 'PASS' if hub_api_check is succeeded else 'FAIL' }}
+  run_once: true
+  when: migrate_hub | default(true)
+
+- name: Display validation summary
+  ansible.builtin.debug:
+    msg: |
+      Migration Validation Summary:
+        Gateway accessible: {{ 'YES' if gateway_check is succeeded else 'NO' }}
+        Controller API: {{ 'YES' if (controller_api_check is succeeded) else 'NO/SKIPPED' }}
+        Hub API: {{ 'YES' if (hub_api_check is succeeded) else 'NO/SKIPPED' }}
+
+      Post-migration manual checks required:
+        - Verify projects, inventories, and job templates under Automation Execution
+        - Verify collections and namespaces under Automation Content
+        - Test job template execution with various credential types
+        - Test workflow templates
+        - Validate user authentication and RBAC
+        - Test API access tokens
+        - Verify SSO integration (if applicable)
+        - Test content synchronization from remotes
+        - Verify execution environments
+  run_once: true

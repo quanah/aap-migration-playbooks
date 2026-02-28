@@ -1,0 +1,55 @@
+---
+- name: Confirm database restore operation
+  ansible.builtin.pause:
+    prompt: >-
+      About to restore databases from migration artifact.
+      This will OVERWRITE existing databases on the target.
+      Press Enter to continue or Ctrl+C to abort.
+  when: confirm_destructive_operations | default(true)
+  run_once: true
+
+- name: Get target database hostname
+  ansible.builtin.set_fact:
+    target_pg_host: "{{ target_pg_host | default(groups['target_db'][0]) }}"
+
+- name: Grant CREATEDB role to database users
+  community.postgresql.postgresql_user:
+    name: "{{ item.pg_user }}"
+    role_attr_flags: CREATEDB
+    login_host: "{{ target_pg_host }}"
+    login_user: "{{ target_pg_admin_user | default('postgres') }}"
+    login_password: "{{ target_pg_admin_password | default(omit) }}"
+  delegate_to: "{{ groups['target_db'][0] }}"
+  loop: "{{ restore_components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"
+
+- name: Restore databases using pg_restore
+  ansible.builtin.command:
+    cmd: >-
+      pg_restore --clean --create --no-owner
+      -h {{ target_pg_host }}
+      -U {{ item.pg_user }}
+      -d template1
+      {{ artifact_dir }}/{{ item.name }}/{{ item.name }}.pgc
+  delegate_to: "{{ groups['target_db'][0] }}"
+  loop: "{{ restore_components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  async: "{{ db_restore_timeout }}"
+  poll: 30
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"
+
+- name: Revoke CREATEDB role from database users
+  community.postgresql.postgresql_user:
+    name: "{{ item.pg_user }}"
+    role_attr_flags: NOCREATEDB
+    login_host: "{{ target_pg_host }}"
+    login_user: "{{ target_pg_admin_user | default('postgres') }}"
+    login_password: "{{ target_pg_admin_password | default(omit) }}"
+  delegate_to: "{{ groups['target_db'][0] }}"
+  loop: "{{ restore_components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"

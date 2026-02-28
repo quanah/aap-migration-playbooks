@@ -1,0 +1,91 @@
+---
+- name: Check AAP version on controller
+  ansible.builtin.command:
+    cmd: awx-manage version
+  delegate_to: "{{ groups['source_controller'][0] }}"
+  register: controller_version_output
+  changed_when: false
+  when: migrate_controller | default(true)
+
+- name: Check AAP version on hub
+  ansible.builtin.shell:
+    cmd: "rpm -q automation-hub --qf '%{VERSION}'"
+  delegate_to: "{{ groups['source_hub'][0] }}"
+  register: hub_version_output
+  changed_when: false
+  when: migrate_hub | default(true)
+
+- name: Check AAP version on gateway
+  ansible.builtin.command:
+    cmd: aap-gateway-manage version
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  register: gateway_version_output
+  changed_when: false
+  when: migrate_gateway | default(true)
+
+- name: Validate AAP version matches requirement
+  ansible.builtin.assert:
+    that:
+      - controller_version_output.stdout is search(required_aap_version)
+    fail_msg: >-
+      AAP version mismatch. Expected {{ required_aap_version }},
+      got {{ controller_version_output.stdout }}.
+      Set skip_version_check=true to bypass.
+    quiet: true
+  when:
+    - not skip_version_check
+    - migrate_controller | default(true)
+
+- name: Check PostgreSQL version on database server
+  ansible.builtin.command:
+    cmd: psql -t -c 'SHOW server_version;'
+  become: true
+  become_user: postgres
+  delegate_to: "{{ groups['source_db'][0] }}"
+  register: pg_version_output
+  changed_when: false
+
+- name: Validate PostgreSQL version
+  ansible.builtin.assert:
+    that:
+      - pg_version_output.stdout is search(required_postgresql_version)
+    fail_msg: >-
+      PostgreSQL version mismatch. Expected {{ required_postgresql_version }},
+      got {{ pg_version_output.stdout | trim }}.
+      PostgreSQL 15 is a strict requirement for migration.
+    quiet: true
+  when: not skip_version_check
+
+- name: Gather controller database settings
+  ansible.builtin.shell:
+    cmd: "awx-manage print_settings | grep '^DATABASES'"
+  delegate_to: "{{ groups['source_controller'][0] }}"
+  register: controller_db_settings
+  changed_when: false
+  when: migrate_controller | default(true)
+
+- name: Gather hub database settings
+  ansible.builtin.shell:
+    cmd: "grep '^DATABASES' /etc/pulp/settings.py"
+  delegate_to: "{{ groups['source_hub'][0] }}"
+  register: hub_db_settings
+  changed_when: false
+  when: migrate_hub | default(true)
+
+- name: Gather gateway database settings
+  ansible.builtin.shell:
+    cmd: "aap-gateway-manage print_settings | grep '^DATABASES'"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  register: gateway_db_settings
+  changed_when: false
+  when: migrate_gateway | default(true)
+
+- name: Display source assessment summary
+  ansible.builtin.debug:
+    msg: |
+      Source Assessment Complete:
+        PostgreSQL version: {{ pg_version_output.stdout | trim }}
+        Controller DB settings gathered: {{ controller_db_settings is defined and controller_db_settings is not skipped }}
+        Hub DB settings gathered: {{ hub_db_settings is defined and hub_db_settings is not skipped }}
+        Gateway DB settings gathered: {{ gateway_db_settings is defined and gateway_db_settings is not skipped }}
+  run_once: true

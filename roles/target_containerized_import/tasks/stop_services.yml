@@ -1,0 +1,61 @@
+---
+- name: Confirm service stop operation
+  ansible.builtin.pause:
+    prompt: >-
+      About to stop all AAP containerized services (except database) for database import.
+      This will cause downtime on the target environment.
+      Press Enter to continue or Ctrl+C to abort.
+  when: confirm_destructive_operations | default(true)
+  run_once: true
+
+- name: Stop PCP on all nodes (if configured)
+  ansible.builtin.systemd:
+    name: "{{ pcp_service }}"
+    state: stopped
+    scope: user
+  ignore_errors: true
+
+- name: Stop controller services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    scope: user
+  delegate_to: "{{ groups['target_controller'][0] }}"
+  loop: "{{ controller_services + controller_extra_services }}"
+  when: migrate_controller | default(true)
+
+- name: Stop hub services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    scope: user
+  delegate_to: "{{ groups['target_hub'][0] }}"
+  loop: "{{ hub_services }}"
+  when: migrate_hub | default(true)
+
+- name: Stop EDA services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    scope: user
+  delegate_to: "{{ groups['target_eda'][0] }}"
+  loop: "{{ eda_services }}"
+  when: migrate_eda | default(false)
+
+- name: Stop gateway services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    scope: user
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  loop: "{{ gateway_services }}"
+  when: migrate_gateway | default(true)
+
+- name: Stop Redis services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    scope: user
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  loop: "{{ redis_services }}"
+  ignore_errors: true

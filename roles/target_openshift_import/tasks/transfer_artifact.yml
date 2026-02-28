@@ -1,0 +1,50 @@
+---
+- name: Copy artifact tarball to temporary pod
+  ansible.builtin.command:
+    cmd: >-
+      oc cp {{ artifact_archive }}
+      {{ ocp_namespace }}/{{ temp_pg_pod_name }}:/tmp/aap-temp-pvc/
+  environment:
+    KUBECONFIG: "{{ kubeconfig }}"
+
+- name: Copy artifact checksum to temporary pod
+  ansible.builtin.command:
+    cmd: >-
+      oc cp {{ artifact_checksum }}
+      {{ ocp_namespace }}/{{ temp_pg_pod_name }}:/tmp/aap-temp-pvc/
+  environment:
+    KUBECONFIG: "{{ kubeconfig }}"
+
+- name: Verify artifact checksum inside pod
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ temp_pg_pod_name }}"
+    command: >-
+      sh -c 'cd /tmp/aap-temp-pvc && sha256sum --check artifact.tar.sha256'
+  register: checksum_verify
+
+- name: Display checksum verification result
+  ansible.builtin.debug:
+    var: checksum_verify.stdout
+
+- name: Extract artifact inside pod
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ temp_pg_pod_name }}"
+    command: >-
+      sh -c 'cd /tmp/aap-temp-pvc && tar xf artifact.tar'
+
+- name: Verify artifact internal checksums
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ temp_pg_pod_name }}"
+    command: >-
+      sh -c 'cd /tmp/aap-temp-pvc/artifact && sha256sum --check sha256sum.txt'
+  register: internal_checksum_verify
+
+- name: Display internal checksum result
+  ansible.builtin.debug:
+    var: internal_checksum_verify.stdout

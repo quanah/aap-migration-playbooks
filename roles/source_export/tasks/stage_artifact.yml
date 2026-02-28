@@ -1,0 +1,20 @@
+---
+- name: Create artifact directory structure on gateway node
+  ansible.builtin.file:
+    path: "{{ artifact_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  loop:
+    - controller
+    - controller/custom_configs
+    - gateway
+    - hub
+
+- name: Create empty secrets file
+  ansible.builtin.file:
+    path: "{{ artifact_dir }}/secrets.yml"
+    state: touch
+    mode: "0600"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  changed_when: false

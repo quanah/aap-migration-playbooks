@@ -1,0 +1,57 @@
+---
+- name: Confirm database restore on OpenShift
+  ansible.builtin.pause:
+    prompt: >-
+      About to restore databases from migration artifact to OpenShift PostgreSQL.
+      This will OVERWRITE existing databases.
+      Press Enter to continue or Ctrl+C to abort.
+  when: confirm_destructive_operations | default(true)
+
+- name: Get PostgreSQL passwords from OCP secrets
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Secret
+    namespace: "{{ ocp_namespace }}"
+    name: "{{ item.secret }}"
+  register: pg_secrets_raw
+  loop:
+    - name: controller
+      secret: "{{ controller_pg_config_secret }}"
+    - name: hub
+      secret: "{{ hub_pg_config_secret }}"
+    - name: gateway
+      secret: "{{ gateway_pg_config_secret }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Parse database credentials
+  ansible.builtin.set_fact:
+    ocp_db_creds: >-
+      {{
+        ocp_db_creds | default({}) | combine({
+          item.item.name: {
+            'user': item.resources[0].data.username | b64decode,
+            'password': item.resources[0].data.password | b64decode,
+            'database': item.resources[0].data.database | b64decode
+          }
+        })
+      }}
+  loop: "{{ pg_secrets_raw.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  no_log: true
+
+- name: Grant CREATEDB and restore each component database
+  ansible.builtin.include_tasks: restore_single_db.yml
+  loop:
+    - name: controller
+      dump_file: controller/controller.pgc
+    - name: hub
+      dump_file: hub/hub.pgc
+    - name: gateway
+      dump_file: gateway/gateway.pgc
+  loop_control:
+    label: "{{ item.name }}"
+    loop_var: db_component
+  when: "lookup('vars', 'migrate_' + db_component.name, default=true)"

@@ -1,0 +1,60 @@
+---
+- name: Confirm database dump operation
+  ansible.builtin.pause:
+    prompt: >-
+      About to perform database dumps for all AAP components.
+      This may take a long time depending on database sizes.
+      Press Enter to continue or Ctrl+C to abort.
+  when: confirm_destructive_operations | default(true)
+  run_once: true
+
+- name: Verify database connectivity for each component
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ item.pg_host }} -U {{ item.pg_user }}
+      -d {{ item.pg_database }} -t -c 'SHOW server_version;'
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  loop: "{{ components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: db_connectivity
+  changed_when: false
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"
+
+- name: Perform database dumps
+  ansible.builtin.command:
+    cmd: >-
+      pg_dump -h {{ item.pg_host }} -U {{ item.pg_user }}
+      -d {{ item.pg_database }}
+      --clean --create -Fc
+      -f {{ artifact_dir }}/{{ item.name }}/{{ item.name }}.pgc
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  loop: "{{ components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  async: "{{ db_dump_timeout }}"
+  poll: 30
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"
+
+- name: Verify dump files exist
+  ansible.builtin.stat:
+    path: "{{ artifact_dir }}/{{ item.name }}/{{ item.name }}.pgc"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  loop: "{{ components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: dump_files
+  failed_when: dump_files.stat.size == 0
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"
+
+- name: Record database names in secrets file
+  ansible.builtin.lineinfile:
+    path: "{{ artifact_dir }}/secrets.yml"
+    line: "{{ item.name }}_pg_database: {{ item.pg_database }}"
+    create: true
+    mode: "0600"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  loop: "{{ components }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: "lookup('vars', 'migrate_' + item.name, default=true)"

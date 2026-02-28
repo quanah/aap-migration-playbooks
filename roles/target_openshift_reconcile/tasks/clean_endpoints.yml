@@ -1,0 +1,54 @@
+---
+- name: Get gateway deployment pod
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=aap-gateway"
+  register: gw_pods
+
+- name: Set gateway pod name
+  ansible.builtin.set_fact:
+    gateway_pod_name: "{{ gw_pods.resources[0].metadata.name }}"
+  when: gw_pods.resources | length > 0
+
+- name: Clean up HTTPPort objects
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ gateway_pod_name }}"
+    command: >-
+      aap-gateway-manage shell -c
+      "from aap_gateway_api.models import HTTPPort; print(HTTPPort.objects.all().delete())"
+  register: httpport_cleanup
+
+- name: Clean up Route objects
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ gateway_pod_name }}"
+    command: >-
+      aap-gateway-manage shell -c
+      "from aap_gateway_api.models import Route; print(Route.objects.all().delete())"
+  register: route_cleanup
+  failed_when: false
+
+- name: Clean up ServiceNode objects
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ gateway_pod_name }}"
+    command: >-
+      aap-gateway-manage shell -c
+      "from aap_gateway_api.models import ServiceNode; print(ServiceNode.objects.all().delete())"
+  register: servicenode_cleanup
+
+- name: Display endpoint cleanup results
+  ansible.builtin.debug:
+    msg: |
+      Endpoint cleanup results:
+        HTTPPort: {{ httpport_cleanup.stdout | default('n/a') }}
+        Route: {{ route_cleanup.stdout | default('n/a') }}
+        ServiceNode: {{ servicenode_cleanup.stdout | default('n/a') }}

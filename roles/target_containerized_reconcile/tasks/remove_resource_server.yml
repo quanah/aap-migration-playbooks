@@ -1,0 +1,15 @@
+---
+- name: List resource server secrets
+  ansible.builtin.shell:
+    cmd: "podman secret ls --format '{%raw%}{{.Name}}{%endraw%}' | grep resource_server"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: resource_server_secrets
+  changed_when: false
+  failed_when: false
+
+- name: Remove resource server secrets
+  ansible.builtin.command:
+    cmd: "podman secret rm {{ item }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  loop: "{{ resource_server_secrets.stdout_lines | default([]) }}"
+  when: resource_server_secrets.stdout_lines | default([]) | length > 0

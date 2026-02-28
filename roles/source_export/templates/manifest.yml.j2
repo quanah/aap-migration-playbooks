@@ -1,0 +1,16 @@
+---
+aap_version: {{ required_aap_version }}
+platform: rpm
+components:
+{% if migrate_controller | default(true) %}
+  - name: controller
+    version: {{ manifest_controller_version.stdout | trim }}
+{% endif %}
+{% if migrate_hub | default(true) %}
+  - name: hub
+    version: {{ manifest_hub_version.stdout | trim }}
+{% endif %}
+{% if migrate_gateway | default(true) %}
+  - name: gateway
+    version: {{ manifest_gateway_version.stdout | trim }}
+{% endif %}

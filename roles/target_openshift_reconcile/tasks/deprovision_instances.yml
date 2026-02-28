@@ -1,0 +1,60 @@
+---
+- name: Get controller task pod
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ kubeconfig }}"
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=aap-controller-task"
+  register: controller_pods
+
+- name: Set controller pod name
+  ansible.builtin.set_fact:
+    controller_pod_name: "{{ controller_pods.resources[0].metadata.name }}"
+  when: controller_pods.resources | length > 0
+
+- name: List instances
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ controller_pod_name }}"
+    command: awx-manage list_instances
+  register: instance_list
+
+- name: Display current instances
+  ansible.builtin.debug:
+    var: instance_list.stdout_lines
+
+- name: Identify orphaned instances (capacity=0)
+  ansible.builtin.set_fact:
+    orphaned_hosts: >-
+      {{
+        instance_list.stdout_lines |
+        select('search', 'capacity=0') |
+        map('regex_search', '([\w.-]+)\s+capacity=0', '\1') |
+        select('string') | list
+      }}
+
+- name: Display orphaned instances
+  ansible.builtin.debug:
+    msg: "Orphaned instances to remove: {{ orphaned_hosts }}"
+  when: orphaned_hosts | length > 0
+
+- name: Confirm instance deprovision
+  ansible.builtin.pause:
+    prompt: >-
+      About to deprovision {{ orphaned_hosts | length }} orphaned instances.
+      Press Enter to continue or Ctrl+C to abort.
+  when:
+    - confirm_destructive_operations | default(true)
+    - orphaned_hosts | length > 0
+
+- name: Deprovision orphaned instances
+  kubernetes.core.k8s_exec:
+    kubeconfig: "{{ kubeconfig }}"
+    namespace: "{{ ocp_namespace }}"
+    pod: "{{ controller_pod_name }}"
+    command: "awx-manage deprovision_instance --hostname={{ item }}"
+  loop: "{{ orphaned_hosts }}"
+  when: orphaned_hosts | length > 0

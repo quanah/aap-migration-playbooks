@@ -1,0 +1,7 @@
+---
+kubeconfig: ~/.kube/config
+ocp_namespace: aap
+aap_instance_name: aap
+confirm_destructive_operations: true
+# gateway_admin_user: admin
+# gateway_admin_password: changeme

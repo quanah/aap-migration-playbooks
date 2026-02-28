@@ -1,0 +1,41 @@
+---
+- name: Find custom configuration files on controller
+  ansible.builtin.find:
+    paths: "{{ controller_custom_config_dir }}"
+    file_type: file
+    excludes: "{{ controller_managed_configs }}"
+  delegate_to: "{{ groups['source_controller'][0] }}"
+  register: custom_configs
+  when: migrate_controller | default(true)
+
+- name: Fetch custom configuration files to artifact
+  ansible.builtin.fetch:
+    src: "{{ item.path }}"
+    dest: "/tmp/migration_custom_configs/"
+    flat: true
+  delegate_to: "{{ groups['source_controller'][0] }}"
+  loop: "{{ custom_configs.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when:
+    - migrate_controller | default(true)
+    - custom_configs.files | default([]) | length > 0
+
+- name: Copy custom configs to artifact directory
+  ansible.builtin.copy:
+    src: "/tmp/migration_custom_configs/{{ item.path | basename }}"
+    dest: "{{ artifact_dir }}/controller/custom_configs/{{ item.path | basename }}"
+    mode: "0644"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  loop: "{{ custom_configs.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when:
+    - migrate_controller | default(true)
+    - custom_configs.files | default([]) | length > 0
+
+- name: Report custom configurations found
+  ansible.builtin.debug:
+    msg: "Found {{ custom_configs.files | default([]) | length }} custom configuration files"
+  run_once: true
+  when: migrate_controller | default(true)

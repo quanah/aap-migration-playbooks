@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+
+# Ansible installed collections (install via requirements.yml)
+collections/ansible_collections/
+
+# Ansible runtime files
+*.retry
+
+# Reference PDFs (too large for git)
+*.pdf
+
+# Secrets and credentials
+**/vault.yml
+*.vault
+*.key
+*.pem
+
+# Migration artifacts
+/tmp/
+*.tar
+*.tar.gz
+*.sha256
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Editor/IDE
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

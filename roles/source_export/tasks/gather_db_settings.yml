@@ -1,0 +1,29 @@
+---
+- name: Gather controller database connection settings
+  ansible.builtin.shell:
+    cmd: "awx-manage print_settings | grep '^DATABASES'"
+  delegate_to: "{{ groups['source_controller'][0] }}"
+  register: source_controller_db_raw
+  changed_when: false
+  when: migrate_controller | default(true)
+
+- name: Gather hub database connection settings
+  ansible.builtin.shell:
+    cmd: "grep '^DATABASES' {{ hub_settings_path }}"
+  delegate_to: "{{ groups['source_hub'][0] }}"
+  register: source_hub_db_raw
+  changed_when: false
+  when: migrate_hub | default(true)
+
+- name: Gather gateway database connection settings
+  ansible.builtin.shell:
+    cmd: "aap-gateway-manage print_settings | grep '^DATABASES'"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  register: source_gateway_db_raw
+  changed_when: false
+  when: migrate_gateway | default(true)
+
+- name: Display gathered database settings
+  ansible.builtin.debug:
+    msg: "Database connection settings gathered from all source components"
+  run_once: true
