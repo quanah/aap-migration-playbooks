@@ -12,7 +12,7 @@ Portions of the code in this repository have been generated with the assistance 
 - Generating inventory templates and variable definitions
 - Drafting documentation
 
-All AI-generated content has been reviewed for correctness, but users should exercise their own judgment and thoroughly test playbooks in non-production environments before relying on them for actual migrations.
+Users should exercise their own judgment and thoroughly test playbooks in non-production environments before relying on them for actual migrations.
 
 ## Contributing
 
@@ -32,6 +32,3 @@ When submitting a PR, please:
 
 For official migration guidance, refer to the [AAP 2.6 Migration Guide](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/ansible_automation_platform_migration/index) published by Red Hat.
 
-## License
-
-This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
