@@ -1,5 +1,5 @@
 ---
-- name: Get PostgreSQL image from existing pod
+- name: Get PostgreSQL image from existing pod (managed)
   kubernetes.core.k8s_info:
     kubeconfig: "{{ kubeconfig }}"
     api_version: v1
@@ -7,10 +7,17 @@
     namespace: "{{ ocp_namespace }}"
     name: "{{ postgres_statefulset }}-0"
   register: pg_pod_info
+  when: target_db_type == 'managed'
 
-- name: Set PostgreSQL image fact
+- name: Set PostgreSQL image fact (managed)
   ansible.builtin.set_fact:
     postgres_image: "{{ pg_pod_info.resources[0].spec.containers[0].image }}"
+  when: target_db_type == 'managed'
+
+- name: Set PostgreSQL client image fact (external)
+  ansible.builtin.set_fact:
+    postgres_image: "{{ postgres_client_image }}"
+  when: target_db_type == 'external'
 
 - name: Display PostgreSQL image
   ansible.builtin.debug:

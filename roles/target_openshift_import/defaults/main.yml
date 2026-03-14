@@ -33,3 +33,7 @@ hub_secret_name: aap-hub-db-fields-encryption
 # Artifact settings
 artifact_archive: /tmp/backups/artifact.tar
 artifact_checksum: /tmp/backups/artifact.tar.sha256
+
+# External database support
+# db_restore_host: (defaults to groups['target_ocp_bastion'][0] at runtime)
+postgres_client_image: "registry.redhat.io/rhel9/postgresql-15:latest"

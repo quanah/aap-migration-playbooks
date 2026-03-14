@@ -30,4 +30,75 @@
         Migrate controller: {{ migrate_controller | default(true) }}
         Migrate hub: {{ migrate_hub | default(true) }}
         Migrate gateway: {{ migrate_gateway | default(true) }}
+        Target DB type: {{ target_db_type }}
   run_once: true
+
+- name: Validate target_db_type value
+  ansible.builtin.assert:
+    that:
+      - target_db_type in ['managed', 'external']
+    fail_msg: "target_db_type must be 'managed' or 'external', got '{{ target_db_type }}'"
+    quiet: true
+  run_once: true
+
+- name: Validate external database variables are defined
+  ansible.builtin.assert:
+    that:
+      - target_pg_host is defined and target_pg_host | length > 0
+      - target_pg_admin_user is defined and target_pg_admin_user | length > 0
+      - target_pg_admin_password is defined and target_pg_admin_password | length > 0
+    fail_msg: >-
+      When target_db_type is 'external', you must define target_pg_host,
+      target_pg_admin_user, and target_pg_admin_password in your inventory.
+    quiet: true
+  run_once: true
+  when: target_db_type == 'external'
+
+- name: Fail if external DB but target_db group has hosts
+  ansible.builtin.fail:
+    msg: >-
+      target_db_type is 'external' but the target_db inventory group contains hosts.
+      Remove hosts from target_db when using an external database.
+  when:
+    - target_db_type == 'external'
+    - groups['target_db'] is defined
+    - groups['target_db'] | length > 0
+  run_once: true
+
+- name: Warn if managed DB but target_db group is empty
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: target_db_type is 'managed' but the target_db inventory group is empty.
+      The containerized path requires hosts in the target_db group for managed databases.
+  when:
+    - target_db_type == 'managed'
+    - groups['target_db'] is defined
+    - groups['target_db'] | length == 0
+  run_once: true
+
+- name: Validate db_restore_host or inventory group is available (external)
+  ansible.builtin.assert:
+    that:
+      - >-
+        (db_restore_host is defined and db_restore_host | length > 0) or
+        (groups['target_gateway'] is defined and groups['target_gateway'] | length > 0) or
+        (groups['target_ocp_bastion'] is defined and groups['target_ocp_bastion'] | length > 0)
+    fail_msg: >-
+      When target_db_type is 'external', either db_restore_host must be set or
+      the target_gateway (containerized) or target_ocp_bastion (OpenShift) inventory
+      group must contain at least one host.
+    quiet: true
+  run_once: true
+  when: target_db_type == 'external'
+
+- name: Display external database configuration
+  ansible.builtin.debug:
+    msg: |
+      External Database Configuration:
+        Target PG host: {{ target_pg_host }}
+        Target PG port: {{ target_pg_port }}
+        Target PG SSL mode: {{ target_pg_ssl_mode }}
+        Target PG admin user: {{ target_pg_admin_user }}
+        DB restore host: {{ db_restore_host | default('(auto)') }}
+  run_once: true
+  when: target_db_type == 'external'

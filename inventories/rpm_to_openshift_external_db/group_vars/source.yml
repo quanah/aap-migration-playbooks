@@ -1,0 +1,21 @@
+---
+# Source RPM environment settings
+ansible_become: true
+
+# Database connection settings (populated from source assessment)
+# controller_pg_host: source-db.example.com
+# controller_pg_user: awx
+# controller_pg_database: awx
+# hub_pg_host: source-db.example.com
+# hub_pg_user: automationhub
+# hub_pg_database: automationhub
+# gateway_pg_host: source-db.example.com
+# gateway_pg_user: gateway
+# gateway_pg_database: gateway
+
+# Source secret key paths (RPM defaults)
+controller_secret_key_path: /etc/tower/SECRET_KEY
+hub_settings_path: /etc/pulp/settings.py
+hub_db_fields_key_path: /etc/pulp/certs/database_fields.symmetric.key
+gateway_secret_key_path: /etc/ansible-automation-platform/gateway/SECRET_KEY
+controller_custom_config_dir: /etc/tower/conf.d

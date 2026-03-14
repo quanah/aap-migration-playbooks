@@ -1,15 +1,23 @@
 ---
+- name: "{{ db_component.name }} - Set restore target host"
+  ansible.builtin.set_fact:
+    _pg_restore_host: "{{ target_pg_host if target_db_type == 'external' else postgres_statefulset }}"
+    _pg_restore_port: "{{ target_pg_port if target_db_type == 'external' else '5432' }}"
+    _pg_admin_user: "{{ target_pg_admin_user if target_db_type == 'external' else 'postgres' }}"
+    _pg_admin_password: "{{ target_pg_admin_password if target_db_type == 'external' else ocp_db_creds[db_component.name].password }}"
+
 - name: "{{ db_component.name }} - Grant CREATEDB role"
   kubernetes.core.k8s_exec:
     kubeconfig: "{{ kubeconfig }}"
     namespace: "{{ ocp_namespace }}"
     pod: "{{ temp_pg_pod_name }}"
     command: >-
-      psql -h {{ postgres_statefulset }}
-      -U postgres
+      psql -h {{ _pg_restore_host }} -p {{ _pg_restore_port }}
+      -U {{ _pg_admin_user }}
       -c "ALTER USER {{ ocp_db_creds[db_component.name].user }} WITH CREATEDB;"
   environment:
-    PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"
+    PGPASSWORD: "{{ _pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode if target_db_type == 'external' else '' }}"
 
 - name: "{{ db_component.name }} - Restore database"
   kubernetes.core.k8s_exec:
@@ -18,12 +26,14 @@
     pod: "{{ temp_pg_pod_name }}"
     command: >-
       pg_restore --clean --create --no-owner
-      -h {{ postgres_statefulset }}
+      -h {{ _pg_restore_host }}
+      -p {{ _pg_restore_port }}
       -U {{ ocp_db_creds[db_component.name].user }}
-      -d {{ ocp_db_creds[db_component.name].database }}
+      -d template1
       /tmp/aap-temp-pvc/artifact/{{ db_component.dump_file }}
   environment:
     PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode if target_db_type == 'external' else '' }}"
   register: restore_result
   failed_when: restore_result.rc != 0 and 'WARNING' not in restore_result.stderr | default('')
 
@@ -33,8 +43,9 @@
     namespace: "{{ ocp_namespace }}"
     pod: "{{ temp_pg_pod_name }}"
     command: >-
-      psql -h {{ postgres_statefulset }}
-      -U postgres
+      psql -h {{ _pg_restore_host }} -p {{ _pg_restore_port }}
+      -U {{ _pg_admin_user }}
       -c "ALTER USER {{ ocp_db_creds[db_component.name].user }} NOCREATEDB;"
   environment:
-    PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"
+    PGPASSWORD: "{{ _pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode if target_db_type == 'external' else '' }}"

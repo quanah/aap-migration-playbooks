@@ -3,3 +3,8 @@ skip_version_check: false
 required_aap_version: "2.6"
 required_postgresql_version: "15"
 confirm_destructive_operations: true
+
+# External database support
+target_db_type: managed
+target_pg_port: 5432
+target_pg_ssl_mode: prefer

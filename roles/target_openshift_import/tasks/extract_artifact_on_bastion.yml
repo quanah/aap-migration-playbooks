@@ -1,0 +1,31 @@
+---
+- name: Verify artifact exists on bastion
+  ansible.builtin.stat:
+    path: "{{ artifact_archive }}"
+  register: bastion_artifact
+
+- name: Fail if artifact not found on bastion
+  ansible.builtin.fail:
+    msg: >-
+      Artifact not found at {{ artifact_archive }} on the bastion host.
+      Copy the migration artifact to the bastion before running the playbook.
+  when: not bastion_artifact.stat.exists
+
+- name: Create artifact directory on bastion
+  ansible.builtin.file:
+    path: "{{ artifact_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Extract artifact on bastion
+  ansible.builtin.command:
+    cmd: "tar xf {{ artifact_archive }}"
+  args:
+    chdir: "{{ artifact_archive | dirname }}"
+
+- name: Verify artifact internal checksums on bastion
+  ansible.builtin.command:
+    cmd: "sha256sum --check sha256sum.txt"
+  args:
+    chdir: "{{ artifact_dir }}"
+  changed_when: false

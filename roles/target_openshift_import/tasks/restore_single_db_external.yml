@@ -1,0 +1,42 @@
+---
+- name: "{{ db_component.name }} - Grant CREATEDB role (bastion)"
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ target_pg_host }} -p {{ target_pg_port }}
+      -U {{ target_pg_admin_user }}
+      -c "ALTER USER {{ ocp_db_creds[db_component.name].user }} WITH CREATEDB;"
+  delegate_to: "{{ db_restore_host }}"
+  environment:
+    PGPASSWORD: "{{ target_pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  no_log: true
+
+- name: "{{ db_component.name }} - Restore database (bastion)"
+  ansible.builtin.command:
+    cmd: >-
+      pg_restore --clean --create --no-owner
+      -h {{ target_pg_host }}
+      -p {{ target_pg_port }}
+      -U {{ ocp_db_creds[db_component.name].user }}
+      -d template1
+      {{ artifact_dir }}/{{ db_component.dump_file }}
+  delegate_to: "{{ db_restore_host }}"
+  environment:
+    PGPASSWORD: "{{ ocp_db_creds[db_component.name].password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  register: restore_result
+  failed_when: restore_result.rc != 0 and 'WARNING' not in restore_result.stderr | default('')
+  async: "{{ db_restore_timeout }}"
+  poll: 30
+
+- name: "{{ db_component.name }} - Revoke CREATEDB role (bastion)"
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ target_pg_host }} -p {{ target_pg_port }}
+      -U {{ target_pg_admin_user }}
+      -c "ALTER USER {{ ocp_db_creds[db_component.name].user }} NOCREATEDB;"
+  delegate_to: "{{ db_restore_host }}"
+  environment:
+    PGPASSWORD: "{{ target_pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  no_log: true

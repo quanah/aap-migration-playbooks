@@ -2,12 +2,15 @@
 - name: Confirm database restore on OpenShift
   ansible.builtin.pause:
     prompt: >-
-      About to restore databases from migration artifact to OpenShift PostgreSQL.
+      About to restore databases from migration artifact to
+      {% if target_db_type == 'external' %}external{% else %}OpenShift{% endif %} PostgreSQL.
       This will OVERWRITE existing databases.
       Press Enter to continue or Ctrl+C to abort.
   when: confirm_destructive_operations | default(true)
 
-- name: Get PostgreSQL passwords from OCP secrets
+# --- Managed: get credentials from OCP secrets ---
+
+- name: Get PostgreSQL passwords from OCP secrets (managed)
   kubernetes.core.k8s_info:
     kubeconfig: "{{ kubeconfig }}"
     api_version: v1
@@ -24,8 +27,9 @@
       secret: "{{ gateway_pg_config_secret }}"
   loop_control:
     label: "{{ item.name }}"
+  when: target_db_type == 'managed'
 
-- name: Parse database credentials
+- name: Parse database credentials (managed)
   ansible.builtin.set_fact:
     ocp_db_creds: >-
       {{
@@ -41,8 +45,31 @@
   loop_control:
     label: "{{ item.item.name }}"
   no_log: true
+  when: target_db_type == 'managed'
 
-- name: Grant CREATEDB and restore each component database
+# --- External: build credentials from inventory variables ---
+
+- name: Build database credentials from inventory (external)
+  ansible.builtin.set_fact:
+    ocp_db_creds:
+      controller:
+        user: "{{ controller_pg_user | default('awx') }}"
+        password: "{{ target_pg_admin_password }}"
+        database: "{{ controller_pg_database | default('awx') }}"
+      hub:
+        user: "{{ hub_pg_user | default('automationhub') }}"
+        password: "{{ target_pg_admin_password }}"
+        database: "{{ hub_pg_database | default('automationhub') }}"
+      gateway:
+        user: "{{ gateway_pg_user | default('gateway') }}"
+        password: "{{ target_pg_admin_password }}"
+        database: "{{ gateway_pg_database | default('gateway') }}"
+  no_log: true
+  when: target_db_type == 'external'
+
+# --- Restore: branch by restore method ---
+
+- name: Grant CREATEDB and restore each component database (managed or external + pod)
   ansible.builtin.include_tasks: restore_single_db.yml
   loop:
     - name: controller
@@ -54,4 +81,23 @@
   loop_control:
     label: "{{ item.name }}"
     loop_var: db_component
-  when: "lookup('vars', 'migrate_' + db_component.name, default=true)"
+  when:
+    - "lookup('vars', 'migrate_' + db_component.name, default=true)"
+    - target_db_type == 'managed' or db_restore_host | default('') == 'pod'
+
+- name: Grant CREATEDB and restore each component database (external + bastion)
+  ansible.builtin.include_tasks: restore_single_db_external.yml
+  loop:
+    - name: controller
+      dump_file: controller/controller.pgc
+    - name: hub
+      dump_file: hub/hub.pgc
+    - name: gateway
+      dump_file: gateway/gateway.pgc
+  loop_control:
+    label: "{{ item.name }}"
+    loop_var: db_component
+  when:
+    - "lookup('vars', 'migrate_' + db_component.name, default=true)"
+    - target_db_type == 'external'
+    - db_restore_host | default('') != 'pod'

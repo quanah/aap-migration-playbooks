@@ -22,10 +22,11 @@ artifact_checksum: /tmp/backups/artifact.tar.sha256
 db_dump_timeout: 3600
 db_restore_timeout: 3600
 
-# Target database type: 'managed' (default, deployed by AAP operator) or 'external'
-target_db_type: managed
-# target_pg_port: 5432
-# target_pg_ssl_mode: prefer
+# External database configuration
+target_db_type: external
+target_pg_host: my-rds-instance.us-east-1.rds.amazonaws.com
+target_pg_port: 5432
+target_pg_ssl_mode: require
 
 # Managed configs to exclude from custom config export
 controller_managed_configs:
@@ -33,3 +34,6 @@ controller_managed_configs:
   - channels.py
   - caching.py
   - cluster_host_id.py
+
+# PostgreSQL image for containerized restore
+postgresql_image: "registry.redhat.io/rhel8/postgresql-15:latest"

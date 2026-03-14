@@ -40,6 +40,17 @@ Ansible playbooks for migrating Red Hat Ansible Automation Platform from RPM-bas
 - `oc` CLI installed and `kubeconfig` configured on the bastion host
 - Sufficient PVC storage (default 200Gi temporary PVC for migration)
 
+### Target Environment (External Database)
+
+When using an external PostgreSQL database (`target_db_type: external`) with either migration path:
+
+- PostgreSQL 15 instance accessible over the network
+- Admin credentials with permission to create/drop databases and alter user roles
+- `psql` and `pg_restore` client tools installed on the restore host:
+  - Containerized path: the target gateway host (default) or a custom `db_restore_host`
+  - OpenShift path: the bastion host (default), or set `db_restore_host: pod` to use a temporary in-cluster pod
+- Network connectivity from the restore host to the external database
+
 ## Quick Start
 
 ### 1. Install Collections
@@ -62,6 +73,14 @@ vi inventories/my_migration/hosts.yml
 ```bash
 cp -r inventories/rpm_to_openshift inventories/my_migration
 vi inventories/my_migration/hosts.yml
+```
+
+**With External Database (either path):**
+```bash
+cp -r inventories/rpm_to_containerized_external_db inventories/my_migration
+# or: cp -r inventories/rpm_to_openshift_external_db inventories/my_migration
+vi inventories/my_migration/hosts.yml
+vi inventories/my_migration/group_vars/all.yml  # Set target_pg_host, target_pg_port, etc.
 ```
 
 Update the following in your inventory:
@@ -141,6 +160,20 @@ inventories/
       source.yml               # Source host settings
       target.yml               # OCP settings (namespace, kubeconfig, PVC size)
       vault.yml                # Sensitive credentials
+  rpm_to_containerized_external_db/
+    hosts.yml                  # No target_db group (external database)
+    group_vars/
+      all.yml                  # Includes target_db_type: external and connection vars
+      source.yml               # Source host settings
+      target.yml               # Target host settings (same as managed)
+      vault.yml                # Sensitive credentials including external DB password
+  rpm_to_openshift_external_db/
+    hosts.yml                  # Same as OpenShift (source + bastion)
+    group_vars/
+      all.yml                  # Includes target_db_type: external, gateway_hostname
+      source.yml               # Source host settings
+      target.yml               # OCP settings (same as managed)
+      vault.yml                # Sensitive credentials including external DB password
 ```
 
 ### Key Variables in `all.yml`
@@ -158,6 +191,11 @@ inventories/
 | `artifact_archive` | `/tmp/backups/artifact.tar` | Final packaged artifact path |
 | `db_dump_timeout` | `3600` | Database dump timeout in seconds |
 | `db_restore_timeout` | `3600` | Database restore timeout in seconds |
+| `target_db_type` | `managed` | `managed` or `external` — whether target DB is managed by installer/operator |
+| `target_pg_host` | — | External database hostname (required when `target_db_type: external`) |
+| `target_pg_port` | `5432` | External database port |
+| `target_pg_ssl_mode` | `prefer` | SSL mode for external DB connections |
+| `db_restore_host` | auto | Host to run `psql`/`pg_restore` from; set to `pod` for OpenShift in-cluster restore |
 
 ### Vault Variables
 
@@ -168,6 +206,13 @@ target_pg_admin_user: postgres
 target_pg_admin_password: <your-password>
 gateway_admin_user: gateway
 gateway_admin_password: <your-password>
+```
+
+For external databases, also include:
+
+```yaml
+target_pg_admin_user: postgres
+target_pg_admin_password: <your-external-db-password>
 ```
 
 ### OpenShift-Specific Variables in `target.yml`

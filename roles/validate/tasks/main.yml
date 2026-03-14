@@ -58,6 +58,31 @@
   run_once: true
   when: migrate_hub | default(true)
 
+- name: Validate external database connectivity
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ target_pg_host }} -p {{ target_pg_port }}
+      -U {{ target_pg_admin_user }} -c 'SELECT 1;'
+  delegate_to: "{{ db_restore_host | default(groups['target_gateway'][0] | default(groups['target_ocp_bastion'][0] | default('localhost'))) }}"
+  environment:
+    PGPASSWORD: "{{ target_pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  register: external_db_check
+  ignore_errors: true
+  changed_when: false
+  no_log: true
+  run_once: true
+  when: target_db_type == 'external'
+
+- name: Report external database status
+  ansible.builtin.debug:
+    msg: >-
+      External database connectivity:
+      {{ 'PASS' if external_db_check is succeeded else 'FAIL' }} -
+      {{ target_pg_host }}:{{ target_pg_port }}
+  run_once: true
+  when: target_db_type == 'external'
+
 - name: Display validation summary
   ansible.builtin.debug:
     msg: |
@@ -65,6 +90,7 @@
         Gateway accessible: {{ 'YES' if gateway_check is succeeded else 'NO' }}
         Controller API: {{ 'YES' if (controller_api_check is succeeded) else 'NO/SKIPPED' }}
         Hub API: {{ 'YES' if (hub_api_check is succeeded) else 'NO/SKIPPED' }}
+        {% if target_db_type == 'external' %}External DB: {{ 'YES' if (external_db_check is succeeded) else 'NO' }}{% endif %}
 
       Post-migration manual checks required:
         - Verify projects, inventories, and job templates under Automation Execution

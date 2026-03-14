@@ -5,11 +5,19 @@
 - name: Scale operators and PostgreSQL
   ansible.builtin.include_tasks: scale_operators.yml
 
+- name: Extract artifact on bastion (external + bastion)
+  ansible.builtin.include_tasks: extract_artifact_on_bastion.yml
+  when:
+    - target_db_type == 'external'
+    - db_restore_host | default('') != 'pod'
+
 - name: Create temporary resources for restore
   ansible.builtin.include_tasks: create_temp_resources.yml
+  when: target_db_type != 'external' or db_restore_host | default('') == 'pod'
 
 - name: Transfer artifact to temporary pod
   ansible.builtin.include_tasks: transfer_artifact.yml
+  when: target_db_type != 'external' or db_restore_host | default('') == 'pod'
 
 - name: Restore databases
   ansible.builtin.include_tasks: restore_databases.yml
@@ -19,6 +27,7 @@
 
 - name: Clean up temporary resources
   ansible.builtin.include_tasks: cleanup_temp.yml
+  when: target_db_type != 'external' or db_restore_host | default('') == 'pod'
 
 - name: Scale AAP back up
   ansible.builtin.include_tasks: scale_up.yml

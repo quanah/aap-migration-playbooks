@@ -4,6 +4,9 @@ db_restore_timeout: 3600
 confirm_destructive_operations: true
 postgresql_image: "registry.redhat.io/rhel8/postgresql-15:latest"
 
+# Host to run pg_restore from when target_db_type is 'external'
+# db_restore_host: (defaults to groups['target_gateway'][0] at runtime)
+
 # Database restore components
 restore_components:
   - name: controller

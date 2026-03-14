@@ -8,18 +8,37 @@
   when: confirm_destructive_operations | default(true)
   run_once: true
 
-- name: Get target database hostname
+- name: Set target database connection facts (managed)
   ansible.builtin.set_fact:
-    target_pg_host: "{{ target_pg_host | default(groups['target_db'][0]) }}"
+    _restore_pg_host: "{{ target_pg_host | default(groups['target_db'][0]) }}"
+    _restore_delegate_host: "{{ groups['target_db'][0] }}"
+    _restore_pg_port: 5432
+    _restore_pg_admin_user: "{{ target_pg_admin_user | default('postgres') }}"
+    _restore_pg_admin_password: "{{ target_pg_admin_password | default(omit) }}"
+    _restore_pg_ssl_mode: ""
+  when: target_db_type == 'managed'
+
+- name: Set target database connection facts (external)
+  ansible.builtin.set_fact:
+    _restore_pg_host: "{{ target_pg_host }}"
+    _restore_delegate_host: "{{ db_restore_host | default(groups['target_gateway'][0]) }}"
+    _restore_pg_port: "{{ target_pg_port }}"
+    _restore_pg_admin_user: "{{ target_pg_admin_user }}"
+    _restore_pg_admin_password: "{{ target_pg_admin_password }}"
+    _restore_pg_ssl_mode: "{{ target_pg_ssl_mode }}"
+  when: target_db_type == 'external'
+  no_log: true
 
 - name: Grant CREATEDB role to database users
   community.postgresql.postgresql_user:
     name: "{{ item.pg_user }}"
     role_attr_flags: CREATEDB
-    login_host: "{{ target_pg_host }}"
-    login_user: "{{ target_pg_admin_user | default('postgres') }}"
-    login_password: "{{ target_pg_admin_password | default(omit) }}"
-  delegate_to: "{{ groups['target_db'][0] }}"
+    login_host: "{{ _restore_pg_host }}"
+    login_port: "{{ _restore_pg_port }}"
+    login_user: "{{ _restore_pg_admin_user }}"
+    login_password: "{{ _restore_pg_admin_password }}"
+    ssl_mode: "{{ _restore_pg_ssl_mode | default(omit, true) }}"
+  delegate_to: "{{ _restore_delegate_host }}"
   loop: "{{ restore_components }}"
   loop_control:
     label: "{{ item.name }}"
@@ -29,11 +48,14 @@
   ansible.builtin.command:
     cmd: >-
       pg_restore --clean --create --no-owner
-      -h {{ target_pg_host }}
+      -h {{ _restore_pg_host }}
+      -p {{ _restore_pg_port }}
       -U {{ item.pg_user }}
       -d template1
       {{ artifact_dir }}/{{ item.name }}/{{ item.name }}.pgc
-  delegate_to: "{{ groups['target_db'][0] }}"
+  delegate_to: "{{ _restore_delegate_host }}"
+  environment:
+    PGSSLMODE: "{{ _restore_pg_ssl_mode | default(omit, true) }}"
   loop: "{{ restore_components }}"
   loop_control:
     label: "{{ item.name }}"
@@ -45,10 +67,12 @@
   community.postgresql.postgresql_user:
     name: "{{ item.pg_user }}"
     role_attr_flags: NOCREATEDB
-    login_host: "{{ target_pg_host }}"
-    login_user: "{{ target_pg_admin_user | default('postgres') }}"
-    login_password: "{{ target_pg_admin_password | default(omit) }}"
-  delegate_to: "{{ groups['target_db'][0] }}"
+    login_host: "{{ _restore_pg_host }}"
+    login_port: "{{ _restore_pg_port }}"
+    login_user: "{{ _restore_pg_admin_user }}"
+    login_password: "{{ _restore_pg_admin_password }}"
+    ssl_mode: "{{ _restore_pg_ssl_mode | default(omit, true) }}"
+  delegate_to: "{{ _restore_delegate_host }}"
   loop: "{{ restore_components }}"
   loop_control:
     label: "{{ item.name }}"

@@ -48,14 +48,17 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   changed_when: false
 
-- name: Verify PostgreSQL version on target
+# --- Managed DB assessment ---
+
+- name: Verify PostgreSQL version on target (managed)
   ansible.builtin.shell:
     cmd: "podman exec postgresql psql -t -c 'SHOW server_version;'"
   delegate_to: "{{ groups['target_db'][0] }}"
   register: target_pg_version
   changed_when: false
+  when: target_db_type == 'managed'
 
-- name: Validate PostgreSQL version on target
+- name: Validate PostgreSQL version on target (managed)
   ansible.builtin.assert:
     that:
       - target_pg_version.stdout is search(required_postgresql_version)
@@ -63,21 +66,89 @@
       Target PostgreSQL version mismatch. Expected {{ required_postgresql_version }},
       got {{ target_pg_version.stdout | trim }}.
     quiet: true
-  when: not skip_version_check
+  when:
+    - target_db_type == 'managed'
+    - not skip_version_check
 
-- name: Create backup of initial containerized environment
+- name: Create backup of initial containerized environment (managed)
   ansible.builtin.command:
     cmd: >-
       ansible-playbook -i {{ containerized_installer_inventory }}
       ansible.containerized_installer.backup
   delegate_to: "{{ groups['target_gateway'][0] }}"
-  when: target_artifact.stat.exists
+  when:
+    - target_db_type == 'managed'
+    - target_artifact.stat.exists
+
+# --- External DB assessment ---
+
+- name: Set db_restore_host for containerized external DB
+  ansible.builtin.set_fact:
+    db_restore_host: "{{ db_restore_host | default(groups['target_gateway'][0]) }}"
+  when: target_db_type == 'external'
+
+- name: Verify psql client is installed (external)
+  ansible.builtin.command:
+    cmd: psql --version
+  delegate_to: "{{ db_restore_host }}"
+  changed_when: false
+  when: target_db_type == 'external'
+
+- name: Verify pg_restore client is installed (external)
+  ansible.builtin.command:
+    cmd: pg_restore --version
+  delegate_to: "{{ db_restore_host }}"
+  changed_when: false
+  when: target_db_type == 'external'
+
+- name: Verify connectivity to external database
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ target_pg_host }} -p {{ target_pg_port }}
+      -U {{ target_pg_admin_user }} -c 'SELECT 1;'
+  delegate_to: "{{ db_restore_host }}"
+  environment:
+    PGPASSWORD: "{{ target_pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  changed_when: false
+  no_log: true
+  when: target_db_type == 'external'
+
+- name: Check PostgreSQL version on external database
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ target_pg_host }} -p {{ target_pg_port }}
+      -U {{ target_pg_admin_user }} -t -c 'SHOW server_version;'
+  delegate_to: "{{ db_restore_host }}"
+  environment:
+    PGPASSWORD: "{{ target_pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  register: target_pg_version_external
+  changed_when: false
+  no_log: true
+  when: target_db_type == 'external'
+
+- name: Validate PostgreSQL version on external database
+  ansible.builtin.assert:
+    that:
+      - target_pg_version_external.stdout is search(required_postgresql_version)
+    fail_msg: >-
+      External PostgreSQL version mismatch. Expected {{ required_postgresql_version }},
+      got {{ target_pg_version_external.stdout | trim }}.
+    quiet: true
+  when:
+    - target_db_type == 'external'
+    - not skip_version_check
+
+# --- Summary ---
 
 - name: Target containerized assessment complete
   ansible.builtin.debug:
     msg: |
       Target Assessment Complete:
+        Database type: {{ target_db_type }}
         Artifact verified: {{ target_artifact.stat.exists }}
-        PostgreSQL version: {{ target_pg_version.stdout | trim }}
-        Initial backup created
+        PostgreSQL version: {{ (target_pg_version.stdout | default(target_pg_version_external.stdout | default('N/A'))) | trim }}
+        {% if target_db_type == 'managed' %}Initial backup created{% endif %}
+        {% if target_db_type == 'external' %}External DB host: {{ target_pg_host }}:{{ target_pg_port }}{% endif %}
   run_once: true

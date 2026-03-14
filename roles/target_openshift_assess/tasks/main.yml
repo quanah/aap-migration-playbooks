@@ -51,7 +51,9 @@
       Deploy AAP using the Operator before running the migration.
     quiet: true
 
-- name: Check PostgreSQL StatefulSet
+# --- Managed DB assessment ---
+
+- name: Check PostgreSQL StatefulSet (managed)
   kubernetes.core.k8s_info:
     kubeconfig: "{{ kubeconfig }}"
     api_version: apps/v1
@@ -59,13 +61,57 @@
     namespace: "{{ ocp_namespace }}"
     name: "{{ postgres_statefulset | default('aap-postgres-15') }}"
   register: pg_statefulset
+  when: target_db_type == 'managed'
 
-- name: Verify PostgreSQL StatefulSet exists
+- name: Verify PostgreSQL StatefulSet exists (managed)
   ansible.builtin.assert:
     that:
       - pg_statefulset.resources | length > 0
     fail_msg: "PostgreSQL StatefulSet '{{ postgres_statefulset | default('aap-postgres-15') }}' not found"
     quiet: true
+  when: target_db_type == 'managed'
+
+# --- External DB assessment ---
+
+- name: Set db_restore_host for OpenShift external DB
+  ansible.builtin.set_fact:
+    db_restore_host: "{{ db_restore_host | default(groups['target_ocp_bastion'][0]) }}"
+  when: target_db_type == 'external'
+
+- name: Verify psql client is installed on bastion (external)
+  ansible.builtin.command:
+    cmd: psql --version
+  delegate_to: "{{ db_restore_host }}"
+  changed_when: false
+  when:
+    - target_db_type == 'external'
+    - db_restore_host != 'pod'
+
+- name: Verify pg_restore client is installed on bastion (external)
+  ansible.builtin.command:
+    cmd: pg_restore --version
+  delegate_to: "{{ db_restore_host }}"
+  changed_when: false
+  when:
+    - target_db_type == 'external'
+    - db_restore_host != 'pod'
+
+- name: Verify connectivity to external database from bastion
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ target_pg_host }} -p {{ target_pg_port }}
+      -U {{ target_pg_admin_user }} -c 'SELECT 1;'
+  delegate_to: "{{ db_restore_host }}"
+  environment:
+    PGPASSWORD: "{{ target_pg_admin_password }}"
+    PGSSLMODE: "{{ target_pg_ssl_mode }}"
+  changed_when: false
+  no_log: true
+  when:
+    - target_db_type == 'external'
+    - db_restore_host != 'pod'
+
+# --- Common ---
 
 - name: Verify artifact exists locally for transfer
   ansible.builtin.stat:
@@ -76,8 +122,11 @@
   ansible.builtin.debug:
     msg: |
       OpenShift Target Assessment Complete:
+        Database type: {{ target_db_type }}
         Namespace: {{ ocp_namespace }}
         AAP instance: {{ aap_instance_name }}
-        PostgreSQL StatefulSet: {{ postgres_statefulset | default('aap-postgres-15') }}
+        {% if target_db_type == 'managed' %}PostgreSQL StatefulSet: {{ postgres_statefulset | default('aap-postgres-15') }}{% endif %}
+        {% if target_db_type == 'external' %}External DB host: {{ target_pg_host }}:{{ target_pg_port }}{% endif %}
+        {% if target_db_type == 'external' %}Restore host: {{ db_restore_host }}{% endif %}
         Operator deployments: {{ operator_deployments.resources | length }}
         Artifact available: {{ local_artifact.stat.exists | default(false) }}
