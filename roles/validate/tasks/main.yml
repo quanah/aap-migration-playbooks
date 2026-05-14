@@ -62,7 +62,7 @@
   ansible.builtin.command:
     cmd: >-
       psql -h {{ target_pg_host }} -p {{ target_pg_port }}
-      -U {{ target_pg_admin_user }} -c 'SELECT 1;'
+      -U {{ target_pg_admin_user }} -d postgres -c 'SELECT 1;'
   delegate_to: "{{ db_restore_host | default(groups['target_gateway'][0] | default(groups['target_ocp_bastion'][0] | default('localhost'))) }}"
   environment:
     PGPASSWORD: "{{ target_pg_admin_password }}"
