@@ -14,6 +14,7 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   loop: "{{ redis_services }}"
   ignore_errors: true
+  run_once: true
 
 - name: Start controller services
   ansible.builtin.systemd:
@@ -23,6 +24,7 @@
   delegate_to: "{{ groups['target_controller'][0] }}"
   loop: "{{ controller_services + controller_extra_services }}"
   when: migrate_controller | default(true)
+  run_once: true
 
 - name: Start hub services
   ansible.builtin.systemd:
@@ -32,6 +34,7 @@
   delegate_to: "{{ groups['target_hub'][0] }}"
   loop: "{{ hub_services }}"
   when: migrate_hub | default(true)
+  run_once: true
 
 - name: Start EDA services
   ansible.builtin.systemd:
@@ -41,6 +44,7 @@
   delegate_to: "{{ groups['target_eda'][0] }}"
   loop: "{{ eda_services }}"
   when: migrate_eda | default(false)
+  run_once: true
 
 - name: Start gateway services
   ansible.builtin.systemd:
@@ -50,6 +54,7 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   loop: "{{ gateway_services }}"
   when: migrate_gateway | default(true)
+  run_once: true
 
 - name: Wait for services to stabilize
   ansible.builtin.pause:

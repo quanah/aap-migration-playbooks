@@ -6,6 +6,7 @@
   register: resource_server_secrets
   changed_when: false
   failed_when: false
+  run_once: true
 
 - name: Remove resource server secrets
   ansible.builtin.command:
@@ -13,3 +14,4 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   loop: "{{ resource_server_secrets.stdout_lines | default([]) }}"
   when: resource_server_secrets.stdout_lines | default([]) | length > 0
+  run_once: true

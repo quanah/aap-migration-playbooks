@@ -4,6 +4,7 @@
     cmd: "podman exec automation-eda-api aap-eda-manage resource_sync"
   delegate_to: "{{ groups['target_eda'][0] }}"
   register: eda_sync_result
+  run_once: true
 
 - name: Display EDA sync result
   ansible.builtin.debug:

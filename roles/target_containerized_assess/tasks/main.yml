@@ -5,6 +5,7 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   register: target_fs_space
   changed_when: false
+  run_once: true
 
 - name: Display target filesystem space
   ansible.builtin.debug:
@@ -16,12 +17,14 @@
     path: "{{ artifact_archive }}"
   delegate_to: "{{ groups['target_gateway'][0] }}"
   register: target_artifact
+  run_once: true
 
 - name: Verify artifact checksum file exists on target
   ansible.builtin.stat:
     path: "{{ artifact_checksum }}"
   delegate_to: "{{ groups['target_gateway'][0] }}"
   register: target_artifact_checksum
+  run_once: true
 
 - name: Validate artifact checksum
   ansible.builtin.command:
@@ -31,6 +34,7 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   changed_when: false
   when: target_artifact.stat.exists and target_artifact_checksum.stat.exists
+  run_once: true
 
 - name: Extract artifact on target
   ansible.builtin.command:
@@ -39,6 +43,7 @@
     chdir: "{{ artifact_archive | dirname }}"
   delegate_to: "{{ groups['target_gateway'][0] }}"
   when: target_artifact.stat.exists
+  run_once: true
 
 - name: Verify artifact internal checksums
   ansible.builtin.command:
@@ -48,6 +53,7 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   changed_when: false
   when: target_artifact.stat.exists
+  run_once: true
 
 # --- Managed DB assessment ---
 
@@ -80,6 +86,7 @@
   when:
     - target_db_type == 'managed'
     - target_artifact.stat.exists
+  run_once: true
 
 # --- External DB assessment ---
 
@@ -87,6 +94,7 @@
   ansible.builtin.set_fact:
     db_restore_host: "{{ db_restore_host | default(groups['target_gateway'][0]) }}"
   when: target_db_type == 'external'
+  run_once: true
 
 - name: Verify psql client is installed (external)
   ansible.builtin.command:
@@ -94,6 +102,7 @@
   delegate_to: "{{ db_restore_host }}"
   changed_when: false
   when: target_db_type == 'external'
+  run_once: true
 
 - name: Verify pg_restore client is installed (external)
   ansible.builtin.command:
@@ -101,6 +110,7 @@
   delegate_to: "{{ db_restore_host }}"
   changed_when: false
   when: target_db_type == 'external'
+  run_once: true
 
 - name: Verify connectivity to external database
   ansible.builtin.command:
@@ -114,6 +124,7 @@
   changed_when: false
   no_log: true
   when: target_db_type == 'external'
+  run_once: true
 
 - name: Check PostgreSQL version on external database
   ansible.builtin.command:
@@ -128,6 +139,7 @@
   changed_when: false
   no_log: true
   when: target_db_type == 'external'
+  run_once: true
 
 - name: Validate PostgreSQL version on external database
   ansible.builtin.assert:
