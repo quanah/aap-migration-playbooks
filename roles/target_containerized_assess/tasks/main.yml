@@ -47,6 +47,7 @@
     chdir: "{{ artifact_dir }}"
   delegate_to: "{{ groups['target_gateway'][0] }}"
   changed_when: false
+  when: target_artifact.stat.exists
 
 # --- Managed DB assessment ---
 
