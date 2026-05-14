@@ -11,7 +11,7 @@
 - name: Verify database connectivity for each component
   ansible.builtin.command:
     cmd: >-
-      psql -h {{ item.pg_host }} -U {{ item.pg_user }}
+      psql -h {{ item.pg_host }} -p {{ item.pg_port }} -U {{ item.pg_user }}
       -d {{ item.pg_database }} -t -c 'SHOW server_version;'
   delegate_to: "{{ groups['source_gateway'][0] }}"
   loop: "{{ components }}"
@@ -19,12 +19,15 @@
     label: "{{ item.name }}"
   register: db_connectivity
   changed_when: false
+  environment:
+    PGPASSWORD: "{{ item.pg_password | default(omit) }}"
+    PGSSLMODE: "{{ source_pg_ssl_mode }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
 
 - name: Perform database dumps
   ansible.builtin.command:
     cmd: >-
-      pg_dump -h {{ item.pg_host }} -U {{ item.pg_user }}
+      pg_dump -h {{ item.pg_host }} -p {{ item.pg_port }} -U {{ item.pg_user }}
       -d {{ item.pg_database }}
       --clean --create -Fc
       -f {{ artifact_dir }}/{{ item.name }}/{{ item.name }}.pgc
@@ -34,6 +37,9 @@
     label: "{{ item.name }}"
   async: "{{ db_dump_timeout }}"
   poll: 30
+  environment:
+    PGPASSWORD: "{{ item.pg_password | default(omit) }}"
+    PGSSLMODE: "{{ source_pg_ssl_mode }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
 
 - name: Verify dump files exist

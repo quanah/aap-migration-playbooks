@@ -30,4 +30,4 @@ controller_operator_deployment: automation-controller-operator-controller-manage
 
 # Gateway admin credentials
 # gateway_admin_user: admin
-# gateway_admin_password: "{{ vault_gateway_admin_password }}"
+# gateway_admin_password: defined in vault.yml

@@ -1,5 +1,5 @@
 ---
-# Target OpenShift environment settings
+# OpenShift bastion host settings
 ansible_become: false
 
 # OpenShift / Kubernetes settings
@@ -7,12 +7,12 @@ kubeconfig: ~/.kube/config
 ocp_namespace: aap
 aap_instance_name: aap
 
-# Target database connection (for external DB only)
-# target_pg_host: target-rds-instance.us-east-1.rds.amazonaws.com
-# target_pg_admin_user: postgres
+# Target database connection (external RDS)
+# target_pg_host: defined in all.yml
+# target_pg_admin_user: defined in vault.yml
 
-# PostgreSQL StatefulSet name
-postgres_statefulset: aap-postgres-15
+# oc command path
+oc_binary: /usr/bin/oc
 
 # Temp PVC settings
 temp_pvc_size: 200Gi
@@ -32,6 +32,6 @@ gateway_pg_config_secret: aap-gateway-postgres-configuration
 gateway_operator_deployment: aap-gateway-operator-controller-manager
 controller_operator_deployment: automation-controller-operator-controller-manager
 
-# Gateway admin credentials
+# Gateway admin credentials for validation
 # gateway_admin_user: admin
 # gateway_admin_password: defined in vault.yml

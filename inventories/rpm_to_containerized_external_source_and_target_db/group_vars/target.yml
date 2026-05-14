@@ -5,9 +5,9 @@ ansible_become: false
 # Containerized installer inventory path
 containerized_installer_inventory: ~/inventory
 
-# Target database connection (populated during target assessment)
-# target_pg_host: target-db.example.com
-# target_pg_admin_user: postgres
+# Target database connection (external RDS)
+# target_pg_host: defined in all.yml
+# target_pg_admin_user: defined in vault.yml
 
 # Service unit lists for stop/start operations
 controller_services:

@@ -36,7 +36,7 @@
     - not skip_version_check
     - migrate_controller | default(true)
 
-- name: Check PostgreSQL version on database server
+- name: Check PostgreSQL version on managed database server
   ansible.builtin.command:
     cmd: psql -t -c 'SHOW server_version;'
   become: true
@@ -44,6 +44,20 @@
   delegate_to: "{{ groups['source_db'][0] }}"
   register: pg_version_output
   changed_when: false
+  when: source_db_type == 'managed'
+
+- name: Check PostgreSQL version on external database
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ source_pg_host }} -p {{ source_pg_port }}
+      -U {{ source_pg_admin_user }} -d postgres -t -c 'SHOW server_version;'
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  register: pg_version_output
+  changed_when: false
+  environment:
+    PGPASSWORD: "{{ source_pg_admin_password }}"
+    PGSSLMODE: "{{ source_pg_ssl_mode }}"
+  when: source_db_type == 'external'
 
 - name: Validate PostgreSQL version
   ansible.builtin.assert:

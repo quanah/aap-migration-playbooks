@@ -30,7 +30,16 @@
         Migrate controller: {{ migrate_controller | default(true) }}
         Migrate hub: {{ migrate_hub | default(true) }}
         Migrate gateway: {{ migrate_gateway | default(true) }}
+        Source DB type: {{ source_db_type }}
         Target DB type: {{ target_db_type }}
+  run_once: true
+
+- name: Validate source_db_type value
+  ansible.builtin.assert:
+    that:
+      - source_db_type in ['managed', 'external']
+    fail_msg: "source_db_type must be 'managed' or 'external', got '{{ source_db_type }}'"
+    quiet: true
   run_once: true
 
 - name: Validate target_db_type value
@@ -41,7 +50,20 @@
     quiet: true
   run_once: true
 
-- name: Validate external database variables are defined
+- name: Validate source external database variables are defined
+  ansible.builtin.assert:
+    that:
+      - source_pg_host is defined and source_pg_host | length > 0
+      - source_pg_admin_user is defined and source_pg_admin_user | length > 0
+      - source_pg_admin_password is defined and source_pg_admin_password | length > 0
+    fail_msg: >-
+      When source_db_type is 'external', you must define source_pg_host,
+      source_pg_admin_user, and source_pg_admin_password in your inventory.
+    quiet: true
+  run_once: true
+  when: source_db_type == 'external'
+
+- name: Validate target external database variables are defined
   ansible.builtin.assert:
     that:
       - target_pg_host is defined and target_pg_host | length > 0
@@ -54,7 +76,29 @@
   run_once: true
   when: target_db_type == 'external'
 
-- name: Fail if external DB but target_db group has hosts
+- name: Fail if source external DB but source_db group has hosts
+  ansible.builtin.fail:
+    msg: >-
+      source_db_type is 'external' but the source_db inventory group contains hosts.
+      Remove hosts from source_db when using an external database.
+  when:
+    - source_db_type == 'external'
+    - groups['source_db'] is defined
+    - groups['source_db'] | length > 0
+  run_once: true
+
+- name: Warn if source managed DB but source_db group is empty
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: source_db_type is 'managed' but the source_db inventory group is empty.
+      Ensure the source_db group contains the database server host.
+  when:
+    - source_db_type == 'managed'
+    - groups['source_db'] is defined
+    - groups['source_db'] | length == 0
+  run_once: true
+
+- name: Fail if target external DB but target_db group has hosts
   ansible.builtin.fail:
     msg: >-
       target_db_type is 'external' but the target_db inventory group contains hosts.
@@ -91,10 +135,21 @@
   run_once: true
   when: target_db_type == 'external'
 
-- name: Display external database configuration
+- name: Display source external database configuration
   ansible.builtin.debug:
     msg: |
-      External Database Configuration:
+      Source External Database Configuration:
+        Source PG host: {{ source_pg_host }}
+        Source PG port: {{ source_pg_port }}
+        Source PG SSL mode: {{ source_pg_ssl_mode }}
+        Source PG admin user: {{ source_pg_admin_user }}
+  run_once: true
+  when: source_db_type == 'external'
+
+- name: Display target external database configuration
+  ansible.builtin.debug:
+    msg: |
+      Target External Database Configuration:
         Target PG host: {{ target_pg_host }}
         Target PG port: {{ target_pg_port }}
         Target PG SSL mode: {{ target_pg_ssl_mode }}

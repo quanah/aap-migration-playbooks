@@ -1,0 +1,27 @@
+---
+# Source RPM environment settings
+ansible_become: true
+
+# Database connection settings for external RDS
+# These override the defaults in source_export role to use the external RDS
+controller_pg_host: "{{ source_pg_host }}"
+controller_pg_user: awx
+controller_pg_database: awx
+# controller_pg_password: defined in vault.yml
+
+hub_pg_host: "{{ source_pg_host }}"
+hub_pg_user: automationhub
+hub_pg_database: automationhub
+# hub_pg_password: defined in vault.yml
+
+gateway_pg_host: "{{ source_pg_host }}"
+gateway_pg_user: gateway
+gateway_pg_database: gateway
+# gateway_pg_password: defined in vault.yml
+
+# Source secret key paths (RPM defaults)
+controller_secret_key_path: /etc/tower/SECRET_KEY
+hub_settings_path: /etc/pulp/settings.py
+hub_db_fields_key_path: /etc/pulp/certs/database_fields.symmetric.key
+gateway_secret_key_path: /etc/ansible-automation-platform/gateway/SECRET_KEY
+controller_custom_config_dir: /etc/tower/conf.d

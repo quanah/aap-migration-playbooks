@@ -163,7 +163,7 @@ Add validation when `target_db_type: external`:
 - Fail (not just warn) if `target_db_type: external` and `target_db` inventory group has hosts — this is an invalid configuration.
 - Warn if `target_db_type: managed` but `target_db` group is empty (containerized path only).
 - Assert that either `db_restore_host` is set or the relevant inventory group (`target_gateway` for containerized, `target_ocp_bastion` for OpenShift) is populated.
-- Assert `target_pg_admin_password` is defined (should reference a vault variable, e.g. `target_pg_admin_password: "{{ vault_target_pg_admin_password }}"`; the README will document this pattern).
+- Assert `target_pg_admin_password` is defined (should reference a vault variable, e.g. `target_pg_admin_password: "{{ target_pg_admin_password }}"`; the README will document this pattern).
 
 ### Phase 7: `validate` Role
 

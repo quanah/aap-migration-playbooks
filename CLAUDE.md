@@ -59,12 +59,16 @@ Roles follow standard Ansible layout (`defaults/main.yml`, `tasks/main.yml`, `te
 
 **OpenShift path** uses `source` (same subgroups) and `target_ocp_bastion` (single bastion host that runs `oc` commands).
 
+**External database configurations**: When using external databases (RDS, Azure Database, etc.), leave the corresponding inventory group empty (`source_db` for external source, `target_db` for external target) and set the appropriate `*_db_type` variable to `external`.
+
 ### Key Variables
 
 - Component toggles: `migrate_controller`, `migrate_hub`, `migrate_gateway`, `migrate_eda`
 - Safety: `confirm_destructive_operations` (default true) triggers `ansible.builtin.pause` before destructive actions
 - Paths: `artifact_dir`, `artifact_archive` control where export artifacts are staged/packaged
 - Timeouts: `db_dump_timeout`, `db_restore_timeout` (default 3600s)
+- Source DB: `source_db_type` (`managed`|`external`), `source_pg_host`, `source_pg_port`, `source_pg_ssl_mode`, `source_pg_admin_user`, `source_pg_admin_password`
+- Target DB: `target_db_type` (`managed`|`external`), `target_pg_host`, `target_pg_port`, `target_pg_ssl_mode`, `target_pg_admin_user`, `target_pg_admin_password`
 - Credentials in `vault.yml` (gitignored, must be ansible-vault encrypted)
 
 ## Conventions

@@ -1,0 +1,49 @@
+---
+# Version requirements
+skip_version_check: false
+required_aap_version: "2.6"
+required_postgresql_version: "15"
+
+# Safety controls
+confirm_destructive_operations: true
+
+# Component migration toggles
+migrate_controller: true
+migrate_hub: true
+migrate_gateway: true
+migrate_eda: false
+
+# Artifact settings
+artifact_dir: /tmp/backups/artifact
+artifact_archive: /tmp/backups/artifact.tar
+artifact_checksum: /tmp/backups/artifact.tar.sha256
+
+# Database timeouts (seconds)
+db_dump_timeout: 3600
+db_restore_timeout: 3600
+
+# Source external database configuration
+source_db_type: external
+source_pg_host: source-rds-instance.us-east-1.rds.amazonaws.com
+source_pg_port: 5432
+source_pg_ssl_mode: require
+# source_pg_admin_user: defined in vault.yml
+# source_pg_admin_password: defined in vault.yml
+
+# Target external database configuration
+target_db_type: external
+target_pg_host: target-rds-instance.us-east-1.rds.amazonaws.com
+target_pg_port: 5432
+target_pg_ssl_mode: require
+# target_pg_admin_user: defined in vault.yml
+# target_pg_admin_password: defined in vault.yml
+
+# Managed configs to exclude from custom config export
+controller_managed_configs:
+  - postgres.py
+  - channels.py
+  - caching.py
+  - cluster_host_id.py
+
+# PostgreSQL image for containerized restore
+postgresql_image: "registry.redhat.io/rhel8/postgresql-15:latest"

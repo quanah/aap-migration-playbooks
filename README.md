@@ -23,7 +23,7 @@ Ansible playbooks for migrating Red Hat Ansible Automation Platform from RPM-bas
 ### Source Environment
 
 - AAP 2.6 RPM-based installation
-- PostgreSQL 15
+- PostgreSQL 15 (on-premise or external RDS)
 - SSH access with sudo privileges to all source hosts
 
 ### Target Environment (Containerized)
@@ -39,6 +39,15 @@ Ansible playbooks for migrating Red Hat Ansible Automation Platform from RPM-bas
 - PostgreSQL StatefulSet running
 - `oc` CLI installed and `kubeconfig` configured on the bastion host
 - Sufficient PVC storage (default 200Gi temporary PVC for migration)
+
+### Source Environment (External Database)
+
+When using an external PostgreSQL database as the source (`source_db_type: external`):
+
+- PostgreSQL 15 instance accessible over the network (e.g., RDS, Azure Database)
+- Admin credentials with permission to connect and dump databases
+- `psql` and `pg_dump` client tools installed on the source gateway host
+- Network connectivity from the source gateway host to the external database
 
 ### Target Environment (External Database)
 
@@ -75,12 +84,30 @@ cp -r inventories/rpm_to_openshift inventories/my_migration
 vi inventories/my_migration/hosts.yml
 ```
 
-**With External Database (either path):**
+**With External Target Database (either path):**
 ```bash
 cp -r inventories/rpm_to_containerized_external_db inventories/my_migration
 # or: cp -r inventories/rpm_to_openshift_external_db inventories/my_migration
 vi inventories/my_migration/hosts.yml
 vi inventories/my_migration/group_vars/all.yml  # Set target_pg_host, target_pg_port, etc.
+```
+
+**With External Source Database (either path):**
+```bash
+cp -r inventories/rpm_to_containerized_external_source_db inventories/my_migration
+# or: cp -r inventories/rpm_to_openshift_external_source_db inventories/my_migration
+vi inventories/my_migration/hosts.yml
+vi inventories/my_migration/group_vars/all.yml  # Set source_pg_host, source_pg_port, etc.
+vi inventories/my_migration/group_vars/source.yml  # Set component DB credentials
+```
+
+**With Both Source and Target External Databases (either path):**
+```bash
+cp -r inventories/rpm_to_containerized_external_source_and_target_db inventories/my_migration
+# or: cp -r inventories/rpm_to_openshift_external_source_and_target_db inventories/my_migration
+vi inventories/my_migration/hosts.yml
+vi inventories/my_migration/group_vars/all.yml  # Set both source and target DB settings
+vi inventories/my_migration/group_vars/source.yml  # Set source component DB credentials
 ```
 
 Update the following in your inventory:
@@ -174,6 +201,34 @@ inventories/
       source.yml               # Source host settings
       target.yml               # OCP settings (same as managed)
       vault.yml                # Sensitive credentials including external DB password
+  rpm_to_containerized_external_source_db/
+    hosts.yml                  # No source_db group (external source database)
+    group_vars/
+      all.yml                  # Includes source_db_type: external and connection vars
+      source.yml               # Source database connection settings per component
+      target.yml               # Target host settings (managed DB)
+      vault.yml                # Sensitive credentials including source DB passwords
+  rpm_to_openshift_external_source_db/
+    hosts.yml                  # No source_db group (external source database)
+    group_vars/
+      all.yml                  # Includes source_db_type: external and connection vars
+      source.yml               # Source database connection settings per component
+      target_ocp_bastion.yml   # OCP bastion settings
+      vault.yml                # Sensitive credentials including source DB passwords
+  rpm_to_containerized_external_source_and_target_db/
+    hosts.yml                  # No source_db or target_db groups (both external)
+    group_vars/
+      all.yml                  # Includes both source_db_type and target_db_type: external
+      source.yml               # Source database connection settings per component
+      target.yml               # Target host settings
+      vault.yml                # Sensitive credentials for both source and target DBs
+  rpm_to_openshift_external_source_and_target_db/
+    hosts.yml                  # No source_db group (both databases external)
+    group_vars/
+      all.yml                  # Includes both source_db_type and target_db_type: external
+      source.yml               # Source database connection settings per component
+      target_ocp_bastion.yml   # OCP bastion settings
+      vault.yml                # Sensitive credentials for both source and target DBs
 ```
 
 ### Key Variables in `all.yml`
@@ -191,28 +246,52 @@ inventories/
 | `artifact_archive` | `/tmp/backups/artifact.tar` | Final packaged artifact path |
 | `db_dump_timeout` | `3600` | Database dump timeout in seconds |
 | `db_restore_timeout` | `3600` | Database restore timeout in seconds |
+| `source_db_type` | `managed` | `managed` or `external` — whether source DB is on-premise or external (RDS, etc.) |
+| `source_pg_host` | — | External source database hostname (required when `source_db_type: external`) |
+| `source_pg_port` | `5432` | External source database port |
+| `source_pg_ssl_mode` | `prefer` | SSL mode for external source DB connections |
+| `source_pg_admin_user` | — | Admin username for external source database |
 | `target_db_type` | `managed` | `managed` or `external` — whether target DB is managed by installer/operator |
-| `target_pg_host` | — | External database hostname (required when `target_db_type: external`) |
-| `target_pg_port` | `5432` | External database port |
-| `target_pg_ssl_mode` | `prefer` | SSL mode for external DB connections |
+| `target_pg_host` | — | External target database hostname (required when `target_db_type: external`) |
+| `target_pg_port` | `5432` | External target database port |
+| `target_pg_ssl_mode` | `prefer` | SSL mode for external target DB connections |
 | `db_restore_host` | auto | Host to run `psql`/`pg_restore` from; set to `pod` for OpenShift in-cluster restore |
 
 ### Vault Variables
 
-The `vault.yml` file should contain database credentials for the target environment:
+The `vault.yml` file should contain database credentials:
 
+**For managed source and target databases:**
 ```yaml
-target_pg_admin_user: postgres
-target_pg_admin_password: <your-password>
-gateway_admin_user: gateway
 gateway_admin_password: <your-password>
 ```
 
-For external databases, also include:
-
+**For external source database:**
 ```yaml
-target_pg_admin_user: postgres
-target_pg_admin_password: <your-external-db-password>
+source_pg_admin_user: <your-db-admin-username>
+source_pg_admin_password: <source-db-admin-password>
+controller_pg_password: <controller-db-password>
+hub_pg_password: <hub-db-password>
+gateway_pg_password: <gateway-db-password>
+```
+
+**For external target database:**
+```yaml
+target_pg_admin_user: <your-db-admin-username>
+target_pg_admin_password: <target-db-admin-password>
+gateway_admin_password: <gateway-admin-password>
+```
+
+**For both external source and target databases:**
+```yaml
+source_pg_admin_user: <source-db-admin-username>
+source_pg_admin_password: <source-db-admin-password>
+controller_pg_password: <controller-db-password>
+hub_pg_password: <hub-db-password>
+gateway_pg_password: <gateway-db-password>
+target_pg_admin_user: <target-db-admin-username>
+target_pg_admin_password: <target-db-admin-password>
+gateway_admin_password: <gateway-admin-password>
 ```
 
 ### OpenShift-Specific Variables in `target.yml`

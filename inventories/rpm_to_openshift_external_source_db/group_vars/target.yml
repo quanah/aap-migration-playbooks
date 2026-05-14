@@ -1,0 +1,10 @@
+---
+# OpenShift bastion host settings
+ansible_become: false
+
+# oc command path
+oc_binary: /usr/bin/oc
+
+# Gateway admin credentials for validation
+# gateway_admin_user: admin
+# gateway_admin_password: defined in vault.yml

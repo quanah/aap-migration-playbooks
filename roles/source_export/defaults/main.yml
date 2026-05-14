@@ -5,19 +5,26 @@ artifact_checksum: /tmp/backups/artifact.tar.sha256
 db_dump_timeout: 3600
 
 # Components to dump
+# Note: pg_host defaults to source_pg_host for external DBs, or source_db[0] for managed
 components:
   - name: controller
     pg_user: "{{ controller_pg_user | default('awx') }}"
     pg_database: "{{ controller_pg_database | default('awx') }}"
-    pg_host: "{{ controller_pg_host | default(groups['source_db'][0]) }}"
+    pg_host: "{{ controller_pg_host | default(source_pg_host if source_db_type == 'external' else groups['source_db'][0]) }}"
+    pg_port: "{{ controller_pg_port | default(source_pg_port) }}"
+    pg_password: "{{ controller_pg_password | default(source_pg_admin_password if source_db_type == 'external' else omit) }}"
   - name: hub
     pg_user: "{{ hub_pg_user | default('automationhub') }}"
     pg_database: "{{ hub_pg_database | default('automationhub') }}"
-    pg_host: "{{ hub_pg_host | default(groups['source_db'][0]) }}"
+    pg_host: "{{ hub_pg_host | default(source_pg_host if source_db_type == 'external' else groups['source_db'][0]) }}"
+    pg_port: "{{ hub_pg_port | default(source_pg_port) }}"
+    pg_password: "{{ hub_pg_password | default(source_pg_admin_password if source_db_type == 'external' else omit) }}"
   - name: gateway
     pg_user: "{{ gateway_pg_user | default('gateway') }}"
     pg_database: "{{ gateway_pg_database | default('gateway') }}"
-    pg_host: "{{ gateway_pg_host | default(groups['source_db'][0]) }}"
+    pg_host: "{{ gateway_pg_host | default(source_pg_host if source_db_type == 'external' else groups['source_db'][0]) }}"
+    pg_port: "{{ gateway_pg_port | default(source_pg_port) }}"
+    pg_password: "{{ gateway_pg_password | default(source_pg_admin_password if source_db_type == 'external' else omit) }}"
 
 # Controller managed configs to exclude
 controller_managed_configs:
