@@ -98,7 +98,7 @@ cp -r inventories/rpm_to_containerized_external_source_db inventories/my_migrati
 # or: cp -r inventories/rpm_to_openshift_external_source_db inventories/my_migration
 vi inventories/my_migration/hosts.yml
 vi inventories/my_migration/group_vars/all.yml  # Set source_pg_host, source_pg_port, etc.
-vi inventories/my_migration/group_vars/source.yml  # Set component DB credentials
+vi inventories/my_migration/group_vars/source/main.yml  # Set component DB credentials
 ```
 
 **With Both Source and Target External Databases (either path):**
@@ -114,8 +114,8 @@ Update the following in your inventory:
 
 - **`hosts.yml`** -- Replace placeholder hostnames with actual FQDNs for all source and target hosts.
 - **`group_vars/all.yml`** -- Review component toggles (`migrate_controller`, `migrate_hub`, `migrate_gateway`, `migrate_eda`) and adjust artifact paths if needed.
-- **`group_vars/source.yml`** -- Verify secret key file paths match your source installation.
-- **`group_vars/target.yml`** -- Set target-specific paths (installer inventory, kubeconfig, namespace, etc.).
+- **`group_vars/source/main.yml`** -- Verify secret key file paths match your source installation.
+- **`group_vars/target/main.yml`** -- Set target-specific paths (installer inventory, kubeconfig, namespace, etc.).
 - **`group_vars/vault.yml`** -- Populate database credentials (see [Vault Variables](#vault-variables) below).
 
 ### 3. Encrypt Sensitive Variables
