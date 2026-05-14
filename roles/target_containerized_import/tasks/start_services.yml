@@ -11,50 +11,49 @@
     name: "{{ item }}"
     state: started
     scope: user
-  delegate_to: "{{ groups['target_gateway'][0] }}"
   loop: "{{ redis_services }}"
   ignore_errors: true
-  run_once: true
+  when: inventory_hostname in groups['target_gateway']
 
 - name: Start controller services
   ansible.builtin.systemd:
     name: "{{ item }}"
     state: started
     scope: user
-  delegate_to: "{{ groups['target_controller'][0] }}"
   loop: "{{ controller_services + controller_extra_services }}"
-  when: migrate_controller | default(true)
-  run_once: true
+  when:
+    - migrate_controller | default(true)
+    - inventory_hostname in groups['target_controller']
 
 - name: Start hub services
   ansible.builtin.systemd:
     name: "{{ item }}"
     state: started
     scope: user
-  delegate_to: "{{ groups['target_hub'][0] }}"
   loop: "{{ hub_services }}"
-  when: migrate_hub | default(true)
-  run_once: true
+  when:
+    - migrate_hub | default(true)
+    - inventory_hostname in groups['target_hub']
 
 - name: Start EDA services
   ansible.builtin.systemd:
     name: "{{ item }}"
     state: started
     scope: user
-  delegate_to: "{{ groups['target_eda'][0] }}"
   loop: "{{ eda_services }}"
-  when: migrate_eda | default(false)
-  run_once: true
+  when:
+    - migrate_eda | default(false)
+    - inventory_hostname in groups['target_eda']
 
 - name: Start gateway services
   ansible.builtin.systemd:
     name: "{{ item }}"
     state: started
     scope: user
-  delegate_to: "{{ groups['target_gateway'][0] }}"
   loop: "{{ gateway_services }}"
-  when: migrate_gateway | default(true)
-  run_once: true
+  when:
+    - migrate_gateway | default(true)
+    - inventory_hostname in groups['target_gateway']
 
 - name: Wait for services to stabilize
   ansible.builtin.pause:
