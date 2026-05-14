@@ -1,5 +1,5 @@
 ---
-- name: Check database sizes
+- name: Check database sizes (managed)
   ansible.builtin.command:
     cmd: psql -t -c '\l+'
   become: true
@@ -7,6 +7,20 @@
   delegate_to: "{{ groups['source_db'][0] }}"
   register: db_sizes
   changed_when: false
+  when: source_db_type == 'managed'
+
+- name: Check database sizes (external)
+  ansible.builtin.command:
+    cmd: >-
+      psql -h {{ source_pg_host }} -p {{ source_pg_port }}
+      -U {{ source_pg_admin_user }} -d postgres -t -c '\l+'
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  environment:
+    PGPASSWORD: "{{ source_pg_admin_password }}"
+    PGSSLMODE: "{{ source_pg_ssl_mode }}"
+  register: db_sizes
+  changed_when: false
+  when: source_db_type == 'external'
 
 - name: Display database sizes
   ansible.builtin.debug:
