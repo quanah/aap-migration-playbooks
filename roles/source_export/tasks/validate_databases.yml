@@ -27,6 +27,13 @@
     var: db_sizes.stdout_lines
   run_once: true
 
+- name: Ensure parent directory exists for filesystem space check
+  ansible.builtin.file:
+    path: "{{ artifact_dir | dirname }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+
 - name: Check available filesystem space on gateway node
   ansible.builtin.command:
     cmd: "df -h {{ artifact_dir | dirname }}"
