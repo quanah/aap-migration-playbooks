@@ -23,6 +23,7 @@
     PGPASSWORD: "{{ item.pg_password | default(omit) }}"
     PGSSLMODE: "{{ source_pg_ssl_mode }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true
 
 - name: Perform database dumps
   ansible.builtin.command:
@@ -41,6 +42,7 @@
     PGPASSWORD: "{{ item.pg_password | default(omit) }}"
     PGSSLMODE: "{{ source_pg_ssl_mode }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true
 
 - name: Verify dump files exist
   ansible.builtin.stat:
@@ -52,6 +54,7 @@
   register: dump_files
   failed_when: dump_files.stat.size == 0
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true
 
 - name: Record database names in secrets file
   ansible.builtin.lineinfile:
@@ -64,3 +67,4 @@
   loop_control:
     label: "{{ item.name }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true

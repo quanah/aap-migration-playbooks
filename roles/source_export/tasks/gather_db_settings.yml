@@ -6,6 +6,7 @@
   register: source_controller_db_raw
   changed_when: false
   when: migrate_controller | default(true)
+  run_once: true
 
 - name: Gather hub database connection settings
   ansible.builtin.shell:
@@ -14,6 +15,7 @@
   register: source_hub_db_raw
   changed_when: false
   when: migrate_hub | default(true)
+  run_once: true
 
 - name: Gather gateway database connection settings
   ansible.builtin.shell:
@@ -22,6 +24,7 @@
   register: source_gateway_db_raw
   changed_when: false
   when: migrate_gateway | default(true)
+  run_once: true
 
 - name: Display gathered database settings
   ansible.builtin.debug:

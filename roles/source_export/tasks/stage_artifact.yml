@@ -10,6 +10,7 @@
     - controller/custom_configs
     - gateway
     - hub
+  run_once: true
 
 - name: Create empty secrets file
   ansible.builtin.file:
@@ -18,3 +19,4 @@
     mode: "0600"
   delegate_to: "{{ groups['source_gateway'][0] }}"
   changed_when: false
+  run_once: true

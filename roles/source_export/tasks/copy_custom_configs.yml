@@ -7,6 +7,7 @@
   delegate_to: "{{ groups['source_controller'][0] }}"
   register: custom_configs
   when: migrate_controller | default(true)
+  run_once: true
 
 - name: Fetch custom configuration files to artifact
   ansible.builtin.fetch:
@@ -20,6 +21,7 @@
   when:
     - migrate_controller | default(true)
     - custom_configs.files | default([]) | length > 0
+  run_once: true
 
 - name: Copy custom configs to artifact directory
   ansible.builtin.copy:
@@ -33,6 +35,7 @@
   when:
     - migrate_controller | default(true)
     - custom_configs.files | default([]) | length > 0
+  run_once: true
 
 - name: Report custom configurations found
   ansible.builtin.debug:

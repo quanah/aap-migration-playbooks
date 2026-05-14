@@ -8,6 +8,7 @@
   register: db_sizes
   changed_when: false
   when: source_db_type == 'managed'
+  run_once: true
 
 - name: Check database sizes (external)
   ansible.builtin.command:
@@ -21,6 +22,7 @@
   register: db_sizes
   changed_when: false
   when: source_db_type == 'external'
+  run_once: true
 
 - name: Display database sizes
   ansible.builtin.debug:
@@ -33,6 +35,7 @@
     state: directory
     mode: "0755"
   delegate_to: "{{ groups['source_gateway'][0] }}"
+  run_once: true
 
 - name: Check available filesystem space on gateway node
   ansible.builtin.command:
@@ -40,6 +43,7 @@
   delegate_to: "{{ groups['source_gateway'][0] }}"
   register: fs_space
   changed_when: false
+  run_once: true
 
 - name: Display available filesystem space
   ansible.builtin.debug:

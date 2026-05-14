@@ -6,6 +6,7 @@
       rm -f sha256sum.txt &&
       find . -type f -name "*.pgc" -exec sha256sum {} \; > sha256sum.txt
   delegate_to: "{{ groups['source_gateway'][0] }}"
+  run_once: true
 
 - name: Display checksums
   ansible.builtin.command:
@@ -13,6 +14,7 @@
   delegate_to: "{{ groups['source_gateway'][0] }}"
   register: checksums
   changed_when: false
+  run_once: true
 
 - name: Show artifact checksums
   ansible.builtin.debug:
@@ -23,17 +25,20 @@
   ansible.builtin.command:
     cmd: "tar cf {{ artifact_archive }} -C {{ artifact_dir | dirname }} {{ artifact_dir | basename }}"
   delegate_to: "{{ groups['source_gateway'][0] }}"
+  run_once: true
 
 - name: Generate artifact tarball checksum
   ansible.builtin.shell:
     cmd: "sha256sum {{ artifact_archive }} > {{ artifact_checksum }}"
   delegate_to: "{{ groups['source_gateway'][0] }}"
+  run_once: true
 
 - name: Verify artifact tarball checksum
   ansible.builtin.command:
     cmd: "sha256sum --check {{ artifact_checksum }}"
   delegate_to: "{{ groups['source_gateway'][0] }}"
   changed_when: false
+  run_once: true
 
 - name: List artifact contents
   ansible.builtin.command:
@@ -41,6 +46,7 @@
   delegate_to: "{{ groups['source_gateway'][0] }}"
   register: artifact_contents
   changed_when: false
+  run_once: true
 
 - name: Display artifact contents
   ansible.builtin.debug:
