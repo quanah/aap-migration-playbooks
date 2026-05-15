@@ -1,4 +1,7 @@
 ---
+- name: Transfer and extract migration artifact
+  ansible.builtin.include_tasks: transfer_artifact.yml
+
 - name: Stop containerized services
   ansible.builtin.include_tasks: stop_services.yml
 

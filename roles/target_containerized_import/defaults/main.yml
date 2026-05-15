@@ -1,5 +1,7 @@
 ---
 artifact_dir: /tmp/backups/artifact
+artifact_archive: /tmp/backups/artifact.tar
+artifact_checksum: /tmp/backups/artifact.tar.sha256
 db_restore_timeout: 3600
 confirm_destructive_operations: true
 postgresql_image: "registry.redhat.io/rhel8/postgresql-15:latest"
@@ -12,12 +14,15 @@ restore_components:
   - name: controller
     pg_user: "{{ controller_pg_user | default('awx') }}"
     pg_database: "{{ controller_pg_database | default('awx') }}"
+    pg_password: "{{ controller_pg_password | default(target_pg_admin_password if target_db_type == 'external' else omit) }}"
   - name: hub
     pg_user: "{{ hub_pg_user | default('automationhub') }}"
     pg_database: "{{ hub_pg_database | default('automationhub') }}"
+    pg_password: "{{ hub_pg_password | default(target_pg_admin_password if target_db_type == 'external' else omit) }}"
   - name: gateway
     pg_user: "{{ gateway_pg_user | default('gateway') }}"
     pg_database: "{{ gateway_pg_database | default('gateway') }}"
+    pg_password: "{{ gateway_pg_password | default(target_pg_admin_password if target_db_type == 'external' else omit) }}"
 
 # Service lists
 controller_services:

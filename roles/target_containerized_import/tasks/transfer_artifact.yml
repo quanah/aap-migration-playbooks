@@ -1,0 +1,85 @@
+---
+- name: Check if artifact exists on target gateway
+  ansible.builtin.stat:
+    path: "{{ artifact_archive }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  register: target_artifact_check
+  run_once: true
+
+- name: Fetch artifact from source gateway to controller
+  ansible.builtin.fetch:
+    src: "{{ artifact_archive }}"
+    dest: "/tmp/{{ artifact_archive | basename }}"
+    flat: true
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  when: not target_artifact_check.stat.exists
+  run_once: true
+
+- name: Fetch artifact checksum from source gateway to controller
+  ansible.builtin.fetch:
+    src: "{{ artifact_checksum }}"
+    dest: "/tmp/{{ artifact_checksum | basename }}"
+    flat: true
+  delegate_to: "{{ groups['source_gateway'][0] }}"
+  when: not target_artifact_check.stat.exists
+  run_once: true
+
+- name: Ensure artifact directory exists on target gateway
+  ansible.builtin.file:
+    path: "{{ artifact_archive | dirname }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  when: not target_artifact_check.stat.exists
+  run_once: true
+
+- name: Transfer artifact from controller to target gateway
+  ansible.builtin.copy:
+    src: "/tmp/{{ artifact_archive | basename }}"
+    dest: "{{ artifact_archive }}"
+    mode: "0644"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  when: not target_artifact_check.stat.exists
+  run_once: true
+
+- name: Transfer artifact checksum from controller to target gateway
+  ansible.builtin.copy:
+    src: "/tmp/{{ artifact_checksum | basename }}"
+    dest: "{{ artifact_checksum }}"
+    mode: "0644"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  when: not target_artifact_check.stat.exists
+  run_once: true
+
+- name: Verify artifact checksum on target
+  ansible.builtin.command:
+    cmd: "sha256sum --check {{ artifact_checksum }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  changed_when: false
+  run_once: true
+
+- name: Remove existing artifact directory on target
+  ansible.builtin.file:
+    path: "{{ artifact_dir }}"
+    state: absent
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  run_once: true
+
+- name: Extract artifact on target
+  ansible.builtin.command:
+    cmd: "tar xf {{ artifact_archive }} -C {{ artifact_dir | dirname }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  run_once: true
+
+- name: Verify artifact internal checksums on target
+  ansible.builtin.command:
+    cmd: "sha256sum --check {{ artifact_dir }}/sha256sum.txt"
+    chdir: "{{ artifact_dir }}"
+  delegate_to: "{{ groups['target_gateway'][0] }}"
+  changed_when: false
+  run_once: true
+
+- name: Artifact transfer complete
+  ansible.builtin.debug:
+    msg: "Migration artifact transferred and verified on target gateway"
+  run_once: true
