@@ -78,7 +78,9 @@ Roles follow standard Ansible layout (`defaults/main.yml`, `tasks/main.yml`, `te
 - Containerized installer (used during assess backup and reconcile phases) - **MUST be configured**:
   - `containerized_installer_dir`: Path to the extracted AAP containerized installer directory (default: `~/ansible-automation-platform-containerized-setup-2.6-1`)
   - `containerized_installer_inventory`: Inventory file relative to `containerized_installer_dir` or absolute path (default: `inventory`)
+  - `containerized_installer_timeout`: Timeout in seconds for installer operations (default: 7200 / 2 hours)
   - The installer uses Ansible playbooks from the `ansible.containerized_installer` collection (not shell scripts)
+  - Environment variables passed to nested ansible-playbook: `SSH_AUTH_SOCK`, `SSH_AGENT_PID`, `ANSIBLE_HOST_KEY_CHECKING`, `ANSIBLE_REMOTE_USER`
 - Credentials in `group_vars/all/vault.yml` (gitignored, must be ansible-vault encrypted)
 
 ## Conventions

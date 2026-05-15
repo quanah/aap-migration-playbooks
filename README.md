@@ -328,10 +328,11 @@ These variables **MUST be configured** in `group_vars/target/main.yml` for conta
 |----------|---------|-------------|
 | `containerized_installer_dir` | `~/ansible-automation-platform-containerized-setup-2.6-1` | **Required**: Path to the extracted AAP containerized installer directory on the control node |
 | `containerized_installer_inventory` | `inventory` | Inventory filename (relative to `containerized_installer_dir`) used by the installer |
+| `containerized_installer_timeout` | `7200` | Timeout in seconds for installer operations (2 hours default). Increase if your installer takes longer to complete |
 
 **Important**: The installer tarball (e.g., `ansible-automation-platform-containerized-setup-2.6-1.tar.gz`) must be downloaded from the Red Hat Customer Portal and extracted on the Ansible control node before running the migration. The playbook invokes the installer's Ansible playbooks during:
-- **Assess phase**: Runs `ansible-playbook -i inventory ansible.containerized_installer.backup` to create a backup of the initial containerized environment (managed DB only)
-- **Reconcile phase**: Runs `ansible-playbook -i inventory ansible.containerized_installer.install` to re-run the installer and apply updated secrets and configuration
+- **Assess phase**: Runs `ansible-playbook -i inventory ansible.containerized_installer.backup` to create a backup of the initial containerized environment (managed DB only). Times out after `containerized_installer_timeout` seconds.
+- **Reconcile phase**: Runs `ansible-playbook -i inventory ansible.containerized_installer.install` to re-run the installer and apply updated secrets and configuration. Times out after `containerized_installer_timeout` seconds.
 
 ### OpenShift-Specific Variables in `target.yml`
 

@@ -83,6 +83,13 @@
   args:
     chdir: "{{ containerized_installer_dir }}"
   delegate_to: localhost
+  environment:
+    SSH_AUTH_SOCK: "{{ lookup('env', 'SSH_AUTH_SOCK') }}"
+    SSH_AGENT_PID: "{{ lookup('env', 'SSH_AGENT_PID') }}"
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+    ANSIBLE_REMOTE_USER: "{{ lookup('env', 'USER') }}"
+  async: "{{ containerized_installer_timeout }}"
+  poll: 60
   when:
     - target_db_type == 'managed'
     - target_artifact.stat.exists

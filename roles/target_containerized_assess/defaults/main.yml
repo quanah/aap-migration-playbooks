@@ -10,3 +10,4 @@ required_postgresql_version: "15"
 # containerized_installer_inventory: Inventory file (relative to installer_dir or absolute path)
 containerized_installer_dir: ~/ansible-automation-platform-containerized-setup-2.6-1
 containerized_installer_inventory: inventory
+containerized_installer_timeout: 7200  # 2 hours - increase if backup takes longer
