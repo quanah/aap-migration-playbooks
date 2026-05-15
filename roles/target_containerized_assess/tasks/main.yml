@@ -83,8 +83,6 @@
   args:
     chdir: "{{ containerized_installer_dir }}"
   delegate_to: localhost
-  environment:
-    ANSIBLE_COLLECTIONS_PATH: "{{ containerized_installer_dir }}"
   when:
     - target_db_type == 'managed'
     - target_artifact.stat.exists

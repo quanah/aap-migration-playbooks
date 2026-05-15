@@ -14,8 +14,6 @@
   args:
     chdir: "{{ containerized_installer_dir }}"
   delegate_to: localhost
-  environment:
-    ANSIBLE_COLLECTIONS_PATH: "{{ containerized_installer_dir }}"
   async: 3600
   poll: 60
   run_once: true
