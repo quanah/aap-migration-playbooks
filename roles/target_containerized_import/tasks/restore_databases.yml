@@ -44,6 +44,7 @@
   loop_control:
     label: "{{ item.name }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true
 
 - name: Restore databases using pg_restore
   ansible.builtin.command:
@@ -63,6 +64,7 @@
   async: "{{ db_restore_timeout }}"
   poll: 30
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true
 
 - name: Revoke CREATEDB role from database users
   community.postgresql.postgresql_user:
@@ -79,3 +81,4 @@
   loop_control:
     label: "{{ item.name }}"
   when: "lookup('vars', 'migrate_' + item.name, default=true)"
+  run_once: true
