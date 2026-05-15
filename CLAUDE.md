@@ -61,6 +61,12 @@ Roles follow standard Ansible layout (`defaults/main.yml`, `tasks/main.yml`, `te
 
 **External database configurations**: When using external databases (RDS, Azure Database, etc.), leave the corresponding inventory group empty (`source_db` for external source, `target_db` for external target) and set the appropriate `*_db_type` variable to `external`.
 
+**Inventory variable structure**: Variables are organized in `group_vars` subdirectories:
+- `group_vars/all/main.yml` - shared variables for all hosts
+- `group_vars/all/vault.yml` - sensitive credentials (ansible-vault encrypted)
+- `group_vars/source/main.yml` - source-specific settings
+- `group_vars/target/main.yml` - target-specific settings
+
 ### Key Variables
 
 - Component toggles: `migrate_controller`, `migrate_hub`, `migrate_gateway`, `migrate_eda`
@@ -69,7 +75,12 @@ Roles follow standard Ansible layout (`defaults/main.yml`, `tasks/main.yml`, `te
 - Timeouts: `db_dump_timeout`, `db_restore_timeout` (default 3600s)
 - Source DB: `source_db_type` (`managed`|`external`), `source_pg_host`, `source_pg_port`, `source_pg_ssl_mode`, `source_pg_admin_user`, `source_pg_admin_password`
 - Target DB: `target_db_type` (`managed`|`external`), `target_pg_host`, `target_pg_port`, `target_pg_ssl_mode`, `target_pg_admin_user`, `target_pg_admin_password`
-- Credentials in `vault.yml` (gitignored, must be ansible-vault encrypted)
+- Containerized installer (used during assess backup and reconcile phases) - **MUST be configured**:
+  - `containerized_installer_dir`: Path to the AAP containerized installer bundle directory (default: `~/ansible-automation-platform-containerized-setup-bundle-2.6-1`)
+  - `containerized_installer_inventory`: Inventory file relative to `containerized_installer_dir` or absolute path (default: `inventory`)
+  - `containerized_installer_command`: Command to run the installer, executed from `containerized_installer_dir` (default: `./setup.sh`)
+  - `containerized_installer_backup_command`: Command to backup the containerized environment, executed from `containerized_installer_dir` (default: `./setup.sh -b`)
+- Credentials in `group_vars/all/vault.yml` (gitignored, must be ansible-vault encrypted)
 
 ## Conventions
 

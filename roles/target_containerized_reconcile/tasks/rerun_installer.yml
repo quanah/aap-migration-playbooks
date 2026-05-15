@@ -10,9 +10,9 @@
 
 - name: Re-run the containerized installer
   ansible.builtin.command:
-    cmd: >-
-      ansible-playbook -i {{ containerized_installer_inventory }}
-      ansible.containerized_installer.install
+    cmd: "{{ containerized_installer_command }} -i {{ containerized_installer_inventory }}"
+  args:
+    chdir: "{{ containerized_installer_dir }}"
   delegate_to: localhost
   async: 3600
   poll: 60

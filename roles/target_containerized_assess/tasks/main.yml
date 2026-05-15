@@ -79,9 +79,9 @@
 
 - name: Create backup of initial containerized environment (managed)
   ansible.builtin.command:
-    cmd: >-
-      ansible-playbook -i {{ containerized_installer_inventory }}
-      ansible.containerized_installer.backup
+    cmd: "{{ containerized_installer_backup_command }} -i {{ containerized_installer_inventory }}"
+  args:
+    chdir: "{{ containerized_installer_dir }}"
   delegate_to: localhost
   when:
     - target_db_type == 'managed'

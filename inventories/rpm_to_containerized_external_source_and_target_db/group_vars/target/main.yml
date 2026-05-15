@@ -2,8 +2,13 @@
 # Target containerized environment settings
 ansible_become: false
 
-# Containerized installer inventory path
-containerized_installer_inventory: ~/inventory
+# AAP Containerized Installer Configuration
+# REQUIRED: Update these paths to match your environment
+# The installer bundle must be available on the Ansible control node
+containerized_installer_dir: ~/ansible-automation-platform-containerized-setup-bundle-2.6-1
+containerized_installer_inventory: inventory  # Relative to containerized_installer_dir
+# containerized_installer_command: "./setup.sh"  # Optional override
+# containerized_installer_backup_command: "./setup.sh -b"  # Optional override
 
 # Target database connection (external RDS)
 # target_pg_host: defined in all.yml

@@ -29,8 +29,13 @@ Ansible playbooks for migrating Red Hat Ansible Automation Platform from RPM-bas
 ### Target Environment (Containerized)
 
 - AAP 2.6 containerized deployment already installed via the containerized installer
-- PostgreSQL 15 container running
+- PostgreSQL 15 container running (if using managed database)
 - SSH access to target hosts
+- **IMPORTANT**: The AAP containerized installer bundle must be available on the control node
+  - Download from Red Hat Customer Portal: `ansible-automation-platform-containerized-setup-bundle-<version>.tar.gz`
+  - Extract to a known location (e.g., `~/ansible-automation-platform-containerized-setup-bundle`)
+  - Configure `containerized_installer_dir` variable to point to this location
+  - The migration playbook uses the installer's `setup.sh` script during the assess (backup) and reconcile (re-run) phases
 
 ### Target Environment (OpenShift)
 
@@ -89,7 +94,7 @@ vi inventories/my_migration/hosts.yml
 cp -r inventories/rpm_to_containerized_external_db inventories/my_migration
 # or: cp -r inventories/rpm_to_openshift_external_db inventories/my_migration
 vi inventories/my_migration/hosts.yml
-vi inventories/my_migration/group_vars/all.yml  # Set target_pg_host, target_pg_port, etc.
+vi inventories/my_migration/group_vars/all/main.yml  # Set target_pg_host, target_pg_port, etc.
 ```
 
 **With External Source Database (either path):**
@@ -97,7 +102,7 @@ vi inventories/my_migration/group_vars/all.yml  # Set target_pg_host, target_pg_
 cp -r inventories/rpm_to_containerized_external_source_db inventories/my_migration
 # or: cp -r inventories/rpm_to_openshift_external_source_db inventories/my_migration
 vi inventories/my_migration/hosts.yml
-vi inventories/my_migration/group_vars/all.yml  # Set source_pg_host, source_pg_port, etc.
+vi inventories/my_migration/group_vars/all/main.yml  # Set source_pg_host, source_pg_port, etc.
 vi inventories/my_migration/group_vars/source/main.yml  # Set component DB credentials
 ```
 
@@ -106,22 +111,25 @@ vi inventories/my_migration/group_vars/source/main.yml  # Set component DB crede
 cp -r inventories/rpm_to_containerized_external_source_and_target_db inventories/my_migration
 # or: cp -r inventories/rpm_to_openshift_external_source_and_target_db inventories/my_migration
 vi inventories/my_migration/hosts.yml
-vi inventories/my_migration/group_vars/all.yml  # Set both source and target DB settings
-vi inventories/my_migration/group_vars/source.yml  # Set source component DB credentials
+vi inventories/my_migration/group_vars/all/main.yml  # Set both source and target DB settings
+vi inventories/my_migration/group_vars/source/main.yml  # Set source component DB credentials
 ```
 
 Update the following in your inventory:
 
 - **`hosts.yml`** -- Replace placeholder hostnames with actual FQDNs for all source and target hosts.
-- **`group_vars/all.yml`** -- Review component toggles (`migrate_controller`, `migrate_hub`, `migrate_gateway`, `migrate_eda`) and adjust artifact paths if needed.
+- **`group_vars/all/main.yml`** -- Review component toggles (`migrate_controller`, `migrate_hub`, `migrate_gateway`, `migrate_eda`) and adjust artifact paths if needed.
 - **`group_vars/source/main.yml`** -- Verify secret key file paths match your source installation.
-- **`group_vars/target/main.yml`** -- Set target-specific paths (installer inventory, kubeconfig, namespace, etc.).
-- **`group_vars/vault.yml`** -- Populate database credentials (see [Vault Variables](#vault-variables) below).
+- **`group_vars/target/main.yml`** -- Set target-specific paths. **For containerized migrations, you MUST configure**:
+  - `containerized_installer_dir`: Path to the AAP containerized installer bundle on the control node (e.g., `~/ansible-automation-platform-containerized-setup-bundle-2.6-1`)
+  - `containerized_installer_inventory`: Inventory filename relative to the installer directory (typically `inventory`)
+  - For OpenShift migrations: Set `ocp_kubeconfig`, `ocp_namespace`, etc.
+- **`group_vars/all/vault.yml`** -- Populate database credentials (see [Vault Variables](#vault-variables) below).
 
 ### 3. Encrypt Sensitive Variables
 
 ```bash
-ansible-vault encrypt inventories/my_migration/group_vars/vault.yml
+ansible-vault encrypt inventories/my_migration/group_vars/all/vault.yml
 ```
 
 ### 4. Run the Migration
@@ -176,45 +184,63 @@ inventories/
   rpm_to_containerized/
     hosts.yml                  # Host definitions and group structure
     group_vars/
-      all.yml                  # Shared variables (versions, toggles, paths)
-      source.yml               # Source host settings (secret paths, config dirs)
-      target.yml               # Target host settings (services, installer paths)
-      vault.yml                # Sensitive credentials (encrypt with ansible-vault)
+      all/
+        main.yml               # Shared variables (versions, toggles, paths)
+        vault.yml              # Sensitive credentials (encrypt with ansible-vault)
+      source/
+        main.yml               # Source host settings (secret paths, config dirs)
+      target/
+        main.yml               # Target host settings (services, installer paths)
   rpm_to_openshift/
     hosts.yml                  # Host definitions (includes OCP bastion)
     group_vars/
-      all.yml                  # Shared variables + OCP-specific defaults
-      source.yml               # Source host settings
-      target.yml               # OCP settings (namespace, kubeconfig, PVC size)
-      vault.yml                # Sensitive credentials
+      all/
+        main.yml               # Shared variables + OCP-specific defaults
+        vault.yml              # Sensitive credentials
+      source/
+        main.yml               # Source host settings
+      target/
+        main.yml               # OCP settings (namespace, kubeconfig, PVC size)
   rpm_to_containerized_external_db/
     hosts.yml                  # No target_db group (external database)
     group_vars/
-      all.yml                  # Includes target_db_type: external and connection vars
-      source.yml               # Source host settings
-      target.yml               # Target host settings (same as managed)
-      vault.yml                # Sensitive credentials including external DB password
+      all/
+        main.yml               # Includes target_db_type: external and connection vars
+        vault.yml              # Sensitive credentials including external DB password
+      source/
+        main.yml               # Source host settings
+      target/
+        main.yml               # Target host settings (same as managed)
   rpm_to_openshift_external_db/
     hosts.yml                  # Same as OpenShift (source + bastion)
     group_vars/
-      all.yml                  # Includes target_db_type: external, gateway_hostname
-      source.yml               # Source host settings
-      target.yml               # OCP settings (same as managed)
-      vault.yml                # Sensitive credentials including external DB password
+      all/
+        main.yml               # Includes target_db_type: external, gateway_hostname
+        vault.yml              # Sensitive credentials including external DB password
+      source/
+        main.yml               # Source host settings
+      target/
+        main.yml               # OCP settings (same as managed)
   rpm_to_containerized_external_source_db/
     hosts.yml                  # No source_db group (external source database)
     group_vars/
-      all.yml                  # Includes source_db_type: external and connection vars
-      source.yml               # Source database connection settings per component
-      target.yml               # Target host settings (managed DB)
-      vault.yml                # Sensitive credentials including source DB passwords
+      all/
+        main.yml               # Includes source_db_type: external and connection vars
+        vault.yml              # Sensitive credentials including source DB passwords
+      source/
+        main.yml               # Source database connection settings per component
+      target/
+        main.yml               # Target host settings (managed DB)
   rpm_to_openshift_external_source_db/
     hosts.yml                  # No source_db group (external source database)
     group_vars/
-      all.yml                  # Includes source_db_type: external and connection vars
-      source.yml               # Source database connection settings per component
-      target_ocp_bastion.yml   # OCP bastion settings
-      vault.yml                # Sensitive credentials including source DB passwords
+      all/
+        main.yml               # Includes source_db_type: external and connection vars
+        vault.yml              # Sensitive credentials including source DB passwords
+      source/
+        main.yml               # Source database connection settings per component
+      target/
+        main.yml               # OCP bastion settings
   rpm_to_containerized_external_source_and_target_db/
     hosts.yml                  # No source_db or target_db groups (both external)
     group_vars/
@@ -294,6 +320,21 @@ target_pg_admin_password: <target-db-admin-password>
 gateway_admin_password: <gateway-admin-password>
 ```
 
+### Containerized Installer Variables (Required for Containerized Path)
+
+These variables **MUST be configured** in `group_vars/target/main.yml` for containerized migrations:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `containerized_installer_dir` | `~/ansible-automation-platform-containerized-setup-bundle` | **Required**: Path to the AAP containerized installer bundle directory on the control node |
+| `containerized_installer_inventory` | `inventory` | Inventory filename (relative to `containerized_installer_dir`) used by the installer |
+| `containerized_installer_command` | `./setup.sh` | Command to run the installer (executed from `containerized_installer_dir`) |
+| `containerized_installer_backup_command` | `./setup.sh -b` | Command to backup the containerized environment (executed from `containerized_installer_dir`) |
+
+**Important**: The installer bundle must be downloaded from the Red Hat Customer Portal and extracted on the Ansible control node before running the migration. The playbook invokes the installer's `setup.sh` script during:
+- **Assess phase**: Creates a backup of the initial containerized environment (managed DB only)
+- **Reconcile phase**: Re-runs the installer to apply updated secrets and configuration
+
 ### OpenShift-Specific Variables in `target.yml`
 
 | Variable | Default | Description |
@@ -358,7 +399,7 @@ ansible-playbook -i inventories/my_migration migrate_rpm_to_containerized.yml --
 
 ### Increasing Timeouts for Large Databases
 
-If database dump or restore operations time out, increase the timeout values in `group_vars/all.yml`:
+If database dump or restore operations time out, increase the timeout values in `group_vars/all/main.yml`:
 
 ```yaml
 db_dump_timeout: 7200    # 2 hours
@@ -370,7 +411,7 @@ db_restore_timeout: 7200  # 2 hours
 For unattended runs (use with caution):
 
 ```yaml
-# In group_vars/all.yml
+# In group_vars/all/main.yml
 confirm_destructive_operations: false
 ```
 
