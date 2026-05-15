@@ -3,6 +3,7 @@
   ansible.builtin.command:
     cmd: "podman exec automation-gateway aap-gateway-manage migrate"
   delegate_to: "{{ groups['target_gateway'][0] }}"
+  run_once: true
 
 - name: Deprovision gateway proxy configuration
   ansible.builtin.command:
@@ -15,6 +16,7 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   register: gateway_deprovision
   changed_when: "'delete' in gateway_deprovision.stdout"
+  run_once: true
 
 - name: Display gateway deprovision result
   ansible.builtin.debug:

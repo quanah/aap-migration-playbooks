@@ -16,3 +16,4 @@
   delegate_to: "{{ groups['target_gateway'][0] }}"
   async: 3600
   poll: 60
+  run_once: true

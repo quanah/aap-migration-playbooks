@@ -5,10 +5,12 @@
   delegate_to: "{{ groups['target_controller'][0] }}"
   register: instance_list
   changed_when: false
+  run_once: true
 
 - name: Display current instances
   ansible.builtin.debug:
     var: instance_list.stdout_lines
+  run_once: true
 
 - name: Identify orphaned instances (capacity=0)
   ansible.builtin.shell:
@@ -20,11 +22,13 @@
   register: orphaned_instances
   changed_when: false
   failed_when: false
+  run_once: true
 
 - name: Display orphaned instances to deprovision
   ansible.builtin.debug:
     msg: "Orphaned instances to remove: {{ orphaned_instances.stdout_lines | default([]) }}"
   when: orphaned_instances.stdout_lines | default([]) | length > 0
+  run_once: true
 
 - name: Confirm instance deprovision
   ansible.builtin.pause:
@@ -44,3 +48,4 @@
   delegate_to: "{{ groups['target_controller'][0] }}"
   loop: "{{ orphaned_instances.stdout_lines | default([]) }}"
   when: orphaned_instances.stdout_lines | default([]) | length > 0
+  run_once: true
