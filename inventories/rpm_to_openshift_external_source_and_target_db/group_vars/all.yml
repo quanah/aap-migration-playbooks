@@ -1,7 +1,7 @@
 ---
 # Version requirements
 skip_version_check: false
-required_aap_version: "2.6"
+required_aap_version: "4.7"
 required_postgresql_version: "15"
 
 # Safety controls
