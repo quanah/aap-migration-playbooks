@@ -13,7 +13,7 @@
     cmd: >-
       ansible-playbook -i {{ containerized_installer_inventory }}
       ansible.containerized_installer.install
-  delegate_to: "{{ groups['target_gateway'][0] }}"
+  delegate_to: localhost
   async: 3600
   poll: 60
   run_once: true

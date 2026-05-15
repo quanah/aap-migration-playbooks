@@ -82,7 +82,7 @@
     cmd: >-
       ansible-playbook -i {{ containerized_installer_inventory }}
       ansible.containerized_installer.backup
-  delegate_to: "{{ groups['target_gateway'][0] }}"
+  delegate_to: localhost
   when:
     - target_db_type == 'managed'
     - target_artifact.stat.exists
