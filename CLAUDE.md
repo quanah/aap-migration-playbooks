@@ -76,7 +76,7 @@ Roles follow standard Ansible layout (`defaults/main.yml`, `tasks/main.yml`, `te
 - Source DB: `source_db_type` (`managed`|`external`), `source_pg_host`, `source_pg_port`, `source_pg_ssl_mode`, `source_pg_admin_user`, `source_pg_admin_password`
 - Target DB: `target_db_type` (`managed`|`external`), `target_pg_host`, `target_pg_port`, `target_pg_ssl_mode`, `target_pg_admin_user`, `target_pg_admin_password`
 - Containerized installer (used during assess backup and reconcile phases) - **MUST be configured**:
-  - `containerized_installer_dir`: Path to the AAP containerized installer bundle directory (default: `~/ansible-automation-platform-containerized-setup-bundle-2.6-1`)
+  - `containerized_installer_dir`: Path to the extracted AAP containerized installer directory (default: `~/ansible-automation-platform-containerized-setup-2.6-1`)
   - `containerized_installer_inventory`: Inventory file relative to `containerized_installer_dir` or absolute path (default: `inventory`)
   - `containerized_installer_command`: Command to run the installer, executed from `containerized_installer_dir` (default: `./setup.sh`)
   - `containerized_installer_backup_command`: Command to backup the containerized environment, executed from `containerized_installer_dir` (default: `./setup.sh -b`)

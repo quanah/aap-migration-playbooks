@@ -31,10 +31,10 @@ Ansible playbooks for migrating Red Hat Ansible Automation Platform from RPM-bas
 - AAP 2.6 containerized deployment already installed via the containerized installer
 - PostgreSQL 15 container running (if using managed database)
 - SSH access to target hosts
-- **IMPORTANT**: The AAP containerized installer bundle must be available on the control node
-  - Download from Red Hat Customer Portal: `ansible-automation-platform-containerized-setup-bundle-<version>.tar.gz`
-  - Extract to a known location (e.g., `~/ansible-automation-platform-containerized-setup-bundle`)
-  - Configure `containerized_installer_dir` variable to point to this location
+- **IMPORTANT**: The AAP containerized installer must be available on the control node
+  - Download from Red Hat Customer Portal: `ansible-automation-platform-containerized-setup-<version>.tar.gz`
+  - Extract to a known location (e.g., `~/ansible-automation-platform-containerized-setup-2.6-1`)
+  - Configure `containerized_installer_dir` variable to point to the extracted directory
   - The migration playbook uses the installer's `setup.sh` script during the assess (backup) and reconcile (re-run) phases
 
 ### Target Environment (OpenShift)
@@ -121,7 +121,7 @@ Update the following in your inventory:
 - **`group_vars/all/main.yml`** -- Review component toggles (`migrate_controller`, `migrate_hub`, `migrate_gateway`, `migrate_eda`) and adjust artifact paths if needed.
 - **`group_vars/source/main.yml`** -- Verify secret key file paths match your source installation.
 - **`group_vars/target/main.yml`** -- Set target-specific paths. **For containerized migrations, you MUST configure**:
-  - `containerized_installer_dir`: Path to the AAP containerized installer bundle on the control node (e.g., `~/ansible-automation-platform-containerized-setup-bundle-2.6-1`)
+  - `containerized_installer_dir`: Path to the extracted AAP containerized installer directory on the control node (e.g., `~/ansible-automation-platform-containerized-setup-2.6-1`)
   - `containerized_installer_inventory`: Inventory filename relative to the installer directory (typically `inventory`)
   - For OpenShift migrations: Set `ocp_kubeconfig`, `ocp_namespace`, etc.
 - **`group_vars/all/vault.yml`** -- Populate database credentials (see [Vault Variables](#vault-variables) below).
@@ -326,12 +326,12 @@ These variables **MUST be configured** in `group_vars/target/main.yml` for conta
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `containerized_installer_dir` | `~/ansible-automation-platform-containerized-setup-bundle` | **Required**: Path to the AAP containerized installer bundle directory on the control node |
+| `containerized_installer_dir` | `~/ansible-automation-platform-containerized-setup-2.6-1` | **Required**: Path to the extracted AAP containerized installer directory on the control node |
 | `containerized_installer_inventory` | `inventory` | Inventory filename (relative to `containerized_installer_dir`) used by the installer |
 | `containerized_installer_command` | `./setup.sh` | Command to run the installer (executed from `containerized_installer_dir`) |
 | `containerized_installer_backup_command` | `./setup.sh -b` | Command to backup the containerized environment (executed from `containerized_installer_dir`) |
 
-**Important**: The installer bundle must be downloaded from the Red Hat Customer Portal and extracted on the Ansible control node before running the migration. The playbook invokes the installer's `setup.sh` script during:
+**Important**: The installer tarball (`ansible-automation-platform-containerized-setup-2.6-1.tar.gz`) must be downloaded from the Red Hat Customer Portal and extracted on the Ansible control node before running the migration. The playbook invokes the installer's `setup.sh` script during:
 - **Assess phase**: Creates a backup of the initial containerized environment (managed DB only)
 - **Reconcile phase**: Re-runs the installer to apply updated secrets and configuration
 

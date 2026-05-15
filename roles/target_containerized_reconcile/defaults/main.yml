@@ -1,9 +1,11 @@
 ---
 # Containerized installer settings - MUST be configured for your environment
-# containerized_installer_dir: Path to the AAP containerized installer bundle
+# Download ansible-automation-platform-containerized-setup-2.6-1.tar.gz from Red Hat Customer Portal
+# Extract the tarball, then set containerized_installer_dir to the extracted directory path
+# containerized_installer_dir: Path to extracted AAP containerized installer directory
 # containerized_installer_inventory: Inventory file (relative to installer_dir or absolute path)
 # containerized_installer_command: Command to run installer (executed from installer_dir)
-containerized_installer_dir: ~/ansible-automation-platform-containerized-setup-bundle-2.6-1
+containerized_installer_dir: ~/ansible-automation-platform-containerized-setup-2.6-1
 containerized_installer_inventory: inventory
 containerized_installer_command: "./setup.sh"
 
