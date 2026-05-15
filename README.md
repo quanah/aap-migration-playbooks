@@ -35,7 +35,7 @@ Ansible playbooks for migrating Red Hat Ansible Automation Platform from RPM-bas
   - Download from Red Hat Customer Portal: `ansible-automation-platform-containerized-setup-<version>.tar.gz`
   - Extract to a known location (e.g., `~/ansible-automation-platform-containerized-setup-2.6-1`)
   - Configure `containerized_installer_dir` variable to point to the extracted directory
-  - The migration playbook uses the installer's `setup.sh` script during the assess (backup) and reconcile (re-run) phases
+  - The migration playbook invokes the installer's Ansible playbooks (`ansible.containerized_installer.backup` and `ansible.containerized_installer.install`) during the assess (backup) and reconcile (re-run) phases
 
 ### Target Environment (OpenShift)
 
@@ -328,12 +328,10 @@ These variables **MUST be configured** in `group_vars/target/main.yml` for conta
 |----------|---------|-------------|
 | `containerized_installer_dir` | `~/ansible-automation-platform-containerized-setup-2.6-1` | **Required**: Path to the extracted AAP containerized installer directory on the control node |
 | `containerized_installer_inventory` | `inventory` | Inventory filename (relative to `containerized_installer_dir`) used by the installer |
-| `containerized_installer_command` | `./setup.sh` | Command to run the installer (executed from `containerized_installer_dir`) |
-| `containerized_installer_backup_command` | `./setup.sh -b` | Command to backup the containerized environment (executed from `containerized_installer_dir`) |
 
-**Important**: The installer tarball (`ansible-automation-platform-containerized-setup-2.6-1.tar.gz`) must be downloaded from the Red Hat Customer Portal and extracted on the Ansible control node before running the migration. The playbook invokes the installer's `setup.sh` script during:
-- **Assess phase**: Creates a backup of the initial containerized environment (managed DB only)
-- **Reconcile phase**: Re-runs the installer to apply updated secrets and configuration
+**Important**: The installer tarball (e.g., `ansible-automation-platform-containerized-setup-2.6-1.tar.gz`) must be downloaded from the Red Hat Customer Portal and extracted on the Ansible control node before running the migration. The playbook invokes the installer's Ansible playbooks during:
+- **Assess phase**: Runs `ansible-playbook -i inventory ansible.containerized_installer.backup` to create a backup of the initial containerized environment (managed DB only)
+- **Reconcile phase**: Runs `ansible-playbook -i inventory ansible.containerized_installer.install` to re-run the installer and apply updated secrets and configuration
 
 ### OpenShift-Specific Variables in `target.yml`
 

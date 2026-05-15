@@ -3,11 +3,10 @@ skip_version_check: false
 required_postgresql_version: "15"
 
 # Containerized installer settings - MUST be configured for your environment
-# Download ansible-automation-platform-containerized-setup-2.6-1.tar.gz from Red Hat Customer Portal
+# Download ansible-automation-platform-containerized-setup-2.6-X.tar.gz from Red Hat Customer Portal
 # Extract the tarball, then set containerized_installer_dir to the extracted directory path
+# The installer uses ansible-playbook with the ansible.containerized_installer collection
 # containerized_installer_dir: Path to extracted AAP containerized installer directory
 # containerized_installer_inventory: Inventory file (relative to installer_dir or absolute path)
-# containerized_installer_backup_command: Command to run backup (executed from installer_dir)
 containerized_installer_dir: ~/ansible-automation-platform-containerized-setup-2.6-1
 containerized_installer_inventory: inventory
-containerized_installer_backup_command: "./setup.sh -b"
