@@ -158,6 +158,19 @@ The playbooks execute phases 0 through 7 sequentially. Each phase can be run ind
 | 6 | `reconcile` | Reconcile gateway, secrets, instances, and hub content | `target_*_reconcile` |
 | 7 | `validate` | Health checks and post-migration validation | `validate` |
 
+### Phase 6: Reconcile Details
+
+The reconcile phase performs post-import cleanup and configuration:
+
+1. **Gateway database migrations**: Runs gateway schema migrations
+2. **Gateway proxy deprovision**: Removes old HTTPPort, ServiceNode, and ServiceCluster entries
+3. **Custom configuration transfer**: Identifies custom configs from the source and prompts for manual inventory updates
+4. **Resource server secrets cleanup**: Removes old resource server secrets
+5. **Containerized installer re-run**: Re-runs the installer to apply updated secrets and configuration (containerized path only)
+6. **EDA gateway sync**: Synchronizes gateway resources for Event-Driven Ansible (if `migrate_eda: true`)
+7. **Orphaned instance cleanup**: Identifies and deprovisions controller instances with stale heartbeats (older than 10 minutes). Active instances with recent heartbeats are preserved, including execution nodes.
+8. **Hub content repair**: Repairs orphaned automation hub content links via Pulp API
+
 ### Running Individual Phases
 
 ```bash

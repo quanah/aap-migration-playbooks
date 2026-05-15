@@ -12,12 +12,25 @@
     var: instance_list.stdout_lines
   run_once: true
 
-- name: Identify orphaned instances (capacity=0)
+- name: Identify orphaned instances (stale heartbeat)
   ansible.builtin.shell:
     cmd: >-
-      podman exec automation-controller-task awx-manage list_instances |
-      grep 'capacity=0' |
-      grep -oP '[\w.-]+(?=\s+capacity=0)'
+      podman exec automation-controller-task bash -c '
+      list_output=$(awx-manage list_instances --no-color);
+      current_time=$(date +%s);
+      echo "$list_output" | grep -E "^\s+\S+\s+capacity=" | while read line; do
+        hostname=$(echo "$line" | awk "{print \$1}");
+        heartbeat=$(echo "$line" | grep -oP "heartbeat=\"\K[^\"]+");
+        if [ -n "$heartbeat" ]; then
+          hb_timestamp=$(date -d "$heartbeat" +%s 2>/dev/null || echo 0);
+          age=$((current_time - hb_timestamp));
+          if [ $age -gt 600 ]; then
+            echo "$hostname (heartbeat age: ${age}s)";
+          fi;
+        else
+          echo "$hostname (no heartbeat)";
+        fi;
+      done'
   delegate_to: "{{ groups['target_controller'][0] }}"
   register: orphaned_instances
   changed_when: false
@@ -33,8 +46,8 @@
 - name: Confirm instance deprovision
   ansible.builtin.pause:
     prompt: >-
-      About to deprovision {{ orphaned_instances.stdout_lines | length }} orphaned instances.
-      Press Enter to continue or Ctrl+C to abort.
+      About to deprovision {{ orphaned_instances.stdout_lines | length }} orphaned instances (heartbeat older than 10 minutes).
+      Review the list above. Press Enter to continue or Ctrl+C to abort.
   when:
     - confirm_destructive_operations | default(true)
     - orphaned_instances.stdout_lines | default([]) | length > 0
@@ -44,7 +57,7 @@
   ansible.builtin.command:
     cmd: >-
       podman exec automation-controller-task
-      awx-manage deprovision_instance --hostname={{ item }}
+      awx-manage deprovision_instance --hostname={{ item.split()[0] }}
   delegate_to: "{{ groups['target_controller'][0] }}"
   loop: "{{ orphaned_instances.stdout_lines | default([]) }}"
   when: orphaned_instances.stdout_lines | default([]) | length > 0
