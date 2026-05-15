@@ -33,6 +33,7 @@
   community.postgresql.postgresql_user:
     name: "{{ item.pg_user }}"
     role_attr_flags: CREATEDB
+    login_db: postgres
     login_host: "{{ _restore_pg_host }}"
     login_port: "{{ _restore_pg_port }}"
     login_user: "{{ _restore_pg_admin_user }}"
@@ -67,6 +68,7 @@
   community.postgresql.postgresql_user:
     name: "{{ item.pg_user }}"
     role_attr_flags: NOCREATEDB
+    login_db: postgres
     login_host: "{{ _restore_pg_host }}"
     login_port: "{{ _restore_pg_port }}"
     login_user: "{{ _restore_pg_admin_user }}"
