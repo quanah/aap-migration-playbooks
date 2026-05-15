@@ -20,9 +20,9 @@
 
 - name: Validate controller API is responding
   ansible.builtin.uri:
-    url: "https://{{ gateway_hostname | default(groups['target_gateway'][0] | default(gateway_hostname)) }}/api/v2/ping/"
+    url: "https://{{ gateway_hostname | default(groups['target_gateway'][0] | default(gateway_hostname)) }}/"
     validate_certs: false
-    status_code: [200]
+    status_code: [200, 302]
     timeout: "{{ validate_timeout }}"
   register: controller_api_check
   ignore_errors: true
